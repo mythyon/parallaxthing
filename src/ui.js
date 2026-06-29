@@ -21,6 +21,38 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
   const isTop = index === 0;
   const isBottom = index === total - 1;
   const selectedClass = isSelected ? " is-selected" : "";
+  const offsetXId = `layer-offset-x-${layer.id}`;
+  const offsetYId = `layer-offset-y-${layer.id}`;
+  const editorMarkup = isSelected ? `
+    <div class="layer-inline-editor">
+      <label class="field field-wide layer-inline-range-field">
+        <span>${t("layerDepthLabel")}</span>
+        <div class="range-row">
+          <input type="range" min="0" max="100" step="1" value="${layer.depth}" data-layer-field="depth">
+          <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.depth}" data-layer-field="depth">
+        </div>
+      </label>
+
+      <label class="field field-wide layer-inline-range-field">
+        <span>${t("layerScaleLabel")}</span>
+        <div class="range-row">
+          <input type="range" min="50" max="300" step="1" value="${layer.scale}" data-layer-field="scale">
+          <input class="value-pill value-input" type="number" min="50" max="300" step="1" value="${layer.scale}" data-layer-field="scale">
+        </div>
+      </label>
+
+      <div class="layer-inline-grid">
+        <div class="layer-inline-number-field">
+          <label class="layer-inline-axis-label" for="${offsetXId}">${t("layerOffsetXLabel")}</label>
+          <input id="${offsetXId}" type="number" min="-2000" max="2000" step="1" value="${layer.offsetX}" data-layer-field="offsetX">
+        </div>
+        <div class="layer-inline-number-field">
+          <label class="layer-inline-axis-label" for="${offsetYId}">${t("layerOffsetYLabel")}</label>
+          <input id="${offsetYId}" type="number" min="-2000" max="2000" step="1" value="${layer.offsetY}" data-layer-field="offsetY">
+        </div>
+      </div>
+    </div>
+  ` : "";
 
   return `
     <article class="layer-card${selectedClass}" data-layer-id="${layer.id}">
@@ -34,6 +66,7 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
         <button class="icon-button" type="button" data-action="move-down" aria-label="${t("moveDown")}" title="${t("moveDown")}" ${isBottom ? "disabled" : ""}>${getIconMarkup("down")}</button>
         <button class="icon-button" type="button" data-action="move-up" aria-label="${t("moveUp")}" title="${t("moveUp")}" ${isTop ? "disabled" : ""}>${getIconMarkup("up")}</button>
       </div>
+      ${editorMarkup}
     </article>
   `;
 }
@@ -79,14 +112,9 @@ export function createUI({ state, elements, callbacks, i18n }) {
     document.documentElement.lang = state.locale;
     elements.canvas.setAttribute("aria-label", t("previewCanvasAria"));
     elements.langSwitch.setAttribute("aria-label", t("langSwitcherAria"));
-    elements.workspaceTabs.setAttribute("aria-label", t("workspaceTabsAria"));
     elements.viewportPicker.setAttribute("aria-label", t("viewportPickerAria"));
 
     elements.topbarTitle.textContent = t("topbarTitle");
-    elements.langLabel.textContent = t("langLabel");
-    elements.tabPreview.textContent = t("previewTitle");
-    elements.tabLayer.textContent = t("layerEditorTitle");
-    elements.tabMotion.textContent = t("cameraTitle");
     elements.dropzoneTitle.textContent = t("dropzoneTitle");
     elements.dropzoneSubtitle.textContent = t("dropzoneSubtitle");
     elements.stackTitle.textContent = t("stackTitle");
@@ -101,14 +129,6 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.pauseButton.title = t("pause");
     elements.stopButton.setAttribute("aria-label", t("stop"));
     elements.stopButton.title = t("stop");
-    elements.layerEditorTitle.textContent = t("layerEditorTitle");
-    elements.layerEditorEmptyTitle.textContent = t("layerEditorEmptyTitle");
-    elements.layerEditorEmptyText.textContent = t("layerEditorEmptyText");
-    elements.selectedLayerLabel.textContent = t("selectedLayerLabel");
-    elements.layerDepthLabel.textContent = t("layerDepthLabel");
-    elements.layerScaleLabel.textContent = t("layerScaleLabel");
-    elements.layerOffsetXLabel.textContent = t("layerOffsetXLabel");
-    elements.layerOffsetYLabel.textContent = t("layerOffsetYLabel");
     elements.cameraTitle.textContent = t("cameraTitle");
     elements.cameraPresetTitle.textContent = t("cameraPresetTitle");
     elements.cameraPresetLabel.textContent = t("cameraPresetLabel");
@@ -118,19 +138,12 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.cameraPresetCustom.textContent = t("presetCustom");
     elements.cameraStartTitle.textContent = t("cameraStartTitle");
     elements.cameraEndTitle.textContent = t("cameraEndTitle");
-    elements.cameraMotionTitle.textContent = t("cameraMotionTitle");
     elements.cameraStartXLabel.textContent = t("cameraStartXLabel");
     elements.cameraStartYLabel.textContent = t("cameraStartYLabel");
     elements.cameraStartZoomLabel.textContent = t("cameraStartZoomLabel");
     elements.cameraEndXLabel.textContent = t("cameraEndXLabel");
     elements.cameraEndYLabel.textContent = t("cameraEndYLabel");
     elements.cameraEndZoomLabel.textContent = t("cameraEndZoomLabel");
-    elements.cameraDurationLabel.textContent = t("cameraDurationLabel");
-    elements.cameraEasingLabel.textContent = t("cameraEasingLabel");
-    elements.cameraEasingLinear.textContent = t("easingLinear");
-    elements.cameraEasingEaseIn.textContent = t("easingEaseIn");
-    elements.cameraEasingEaseOut.textContent = t("easingEaseOut");
-    elements.cameraEasingEaseInOut.textContent = t("easingEaseInOut");
     elements.sceneTitle.textContent = t("sceneTitle");
     elements.viewportLabel.textContent = t("viewportLabel");
     elements.viewportLandscapeButton.innerHTML = getIconMarkup("viewport-landscape");
@@ -198,30 +211,6 @@ export function createUI({ state, elements, callbacks, i18n }) {
       .join("");
   }
 
-  function renderLayerEditor() {
-    const selectedLayer = resolveSelectedLayer(state);
-    const hasSelection = Boolean(selectedLayer);
-
-    elements.layerEditorEmpty.hidden = hasSelection;
-    elements.layerEditorForm.hidden = !hasSelection;
-
-    if (!selectedLayer) {
-      return;
-    }
-
-    elements.layerEditorName.textContent = selectedLayer.fileName;
-    elements.selectedLayerMeta.textContent = t("selectedLayerMeta", {
-      width: selectedLayer.width,
-      height: selectedLayer.height,
-    });
-    elements.layerDepthInput.value = String(selectedLayer.depth);
-    elements.layerDepthValue.textContent = String(selectedLayer.depth);
-    elements.layerScaleInput.value = String(selectedLayer.scale);
-    elements.layerScaleValue.textContent = `${selectedLayer.scale}%`;
-    elements.layerOffsetXInput.value = String(selectedLayer.offsetX);
-    elements.layerOffsetYInput.value = String(selectedLayer.offsetY);
-  }
-
   function renderCamera() {
     elements.cameraStartXInput.value = String(state.camera.start.x);
     elements.cameraStartYInput.value = String(state.camera.start.y);
@@ -229,9 +218,7 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.cameraEndXInput.value = String(state.camera.end.x);
     elements.cameraEndYInput.value = String(state.camera.end.y);
     elements.cameraEndZoomInput.value = String(state.camera.end.zoom);
-    elements.cameraDurationInput.value = String(state.camera.duration);
     elements.cameraDurationInputPreview.value = String(state.camera.duration);
-    elements.cameraEasingInput.value = state.camera.easing;
     elements.cameraEasingInputPreview.value = state.camera.easing;
     elements.cameraPresetInput.value = state.cameraPreset;
   }
@@ -286,27 +273,10 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.langRuButton.setAttribute("aria-pressed", String(state.locale === "ru"));
   }
 
-  function renderTabs() {
-    const tabs = [
-      ["preview", elements.tabPreview, elements.previewPanel],
-      ["layer", elements.tabLayer, elements.layerPanel],
-      ["motion", elements.tabMotion, elements.motionPanel],
-    ];
-
-    for (const [tabId, button, panel] of tabs) {
-      const isActive = state.activeTab === tabId;
-      button.classList.toggle("is-active", isActive);
-      button.setAttribute("aria-selected", String(isActive));
-      panel.hidden = !isActive;
-    }
-  }
-
   function render() {
     renderStaticText();
-    renderTabs();
     renderStatus();
     renderLayerList();
-    renderLayerEditor();
     renderCamera();
     renderMeta();
     renderPlayback();
@@ -369,6 +339,16 @@ export function createUI({ state, elements, callbacks, i18n }) {
     }
   });
 
+  elements.layerList.addEventListener("input", (event) => {
+    const field = event.target.dataset.layerField;
+
+    if (!field) {
+      return;
+    }
+
+    callbacks.onLayerChange(field, event.target.value);
+  });
+
   elements.playButton.addEventListener("click", () => callbacks.onPlay());
   elements.pauseButton.addEventListener("click", () => callbacks.onPause());
   elements.stopButton.addEventListener("click", () => callbacks.onStop());
@@ -382,18 +362,10 @@ export function createUI({ state, elements, callbacks, i18n }) {
   elements.langEnButton.addEventListener("click", () => callbacks.onLanguageChange("en"));
   elements.langRuButton.addEventListener("click", () => callbacks.onLanguageChange("ru"));
   elements.autoDepthButton.addEventListener("click", () => callbacks.onAutoDepth());
-  elements.tabPreview.addEventListener("click", () => callbacks.onTabChange("preview"));
-  elements.tabLayer.addEventListener("click", () => callbacks.onTabChange("layer"));
-  elements.tabMotion.addEventListener("click", () => callbacks.onTabChange("motion"));
   elements.viewportLandscapeButton.addEventListener("click", () => callbacks.onViewportPresetChange("landscape"));
   elements.viewportPortraitButton.addEventListener("click", () => callbacks.onViewportPresetChange("portrait"));
   elements.viewportSquareButton.addEventListener("click", () => callbacks.onViewportPresetChange("square"));
   elements.cameraPresetInput.addEventListener("change", (event) => callbacks.onCameraPresetChange(event.target.value));
-
-  elements.layerDepthInput.addEventListener("input", (event) => callbacks.onLayerChange("depth", event.target.value));
-  elements.layerScaleInput.addEventListener("input", (event) => callbacks.onLayerChange("scale", event.target.value));
-  elements.layerOffsetXInput.addEventListener("input", (event) => callbacks.onLayerChange("offsetX", event.target.value));
-  elements.layerOffsetYInput.addEventListener("input", (event) => callbacks.onLayerChange("offsetY", event.target.value));
 
   elements.cameraStartXInput.addEventListener("input", (event) => callbacks.onCameraChange("startX", event.target.value));
   elements.cameraStartYInput.addEventListener("input", (event) => callbacks.onCameraChange("startY", event.target.value));
@@ -401,9 +373,7 @@ export function createUI({ state, elements, callbacks, i18n }) {
   elements.cameraEndXInput.addEventListener("input", (event) => callbacks.onCameraChange("endX", event.target.value));
   elements.cameraEndYInput.addEventListener("input", (event) => callbacks.onCameraChange("endY", event.target.value));
   elements.cameraEndZoomInput.addEventListener("input", (event) => callbacks.onCameraChange("endZoom", event.target.value));
-  elements.cameraDurationInput.addEventListener("input", (event) => callbacks.onCameraChange("duration", event.target.value));
   elements.cameraDurationInputPreview.addEventListener("input", (event) => callbacks.onCameraChange("duration", event.target.value));
-  elements.cameraEasingInput.addEventListener("change", (event) => callbacks.onCameraChange("easing", event.target.value));
   elements.cameraEasingInputPreview.addEventListener("change", (event) => callbacks.onCameraChange("easing", event.target.value));
 
   return { render };

@@ -70,7 +70,6 @@ function isPngCandidate(file) {
 
 const state = {
   locale: getDefaultLocale(),
-  activeTab: "preview",
   layers: [],
   selectedLayerId: null,
   cameraPreset: "move-left",
@@ -117,13 +116,6 @@ const elements = {
   langLabel: document.querySelector("#lang-label"),
   langEnButton: document.querySelector("#lang-en-button"),
   langRuButton: document.querySelector("#lang-ru-button"),
-  workspaceTabs: document.querySelector("#workspace-tabs"),
-  tabPreview: document.querySelector("#tab-preview"),
-  tabLayer: document.querySelector("#tab-layer"),
-  tabMotion: document.querySelector("#tab-motion"),
-  previewPanel: document.querySelector("#tab-panel-preview"),
-  layerPanel: document.querySelector("#tab-panel-layer"),
-  motionPanel: document.querySelector("#tab-panel-motion"),
   dropzone: document.querySelector("#dropzone"),
   dropzoneTitle: document.querySelector("#dropzone-title"),
   dropzoneSubtitle: document.querySelector("#dropzone-subtitle"),
@@ -141,24 +133,6 @@ const elements = {
   playButton: document.querySelector("#play-button"),
   pauseButton: document.querySelector("#pause-button"),
   stopButton: document.querySelector("#stop-button"),
-  layerEditorTitle: document.querySelector("#layer-editor-title"),
-  layerEditorEmpty: document.querySelector("#layer-editor-empty"),
-  layerEditorEmptyTitle: document.querySelector("#layer-editor-empty-title"),
-  layerEditorEmptyText: document.querySelector("#layer-editor-empty-text"),
-  layerEditorForm: document.querySelector("#layer-editor-form"),
-  selectedLayerLabel: document.querySelector("#selected-layer-label"),
-  layerEditorName: document.querySelector("#layer-editor-name"),
-  selectedLayerMeta: document.querySelector("#selected-layer-meta"),
-  layerDepthLabel: document.querySelector("#layer-depth-label"),
-  layerDepthInput: document.querySelector("#layer-depth-input"),
-  layerDepthValue: document.querySelector("#layer-depth-value"),
-  layerScaleLabel: document.querySelector("#layer-scale-label"),
-  layerScaleInput: document.querySelector("#layer-scale-input"),
-  layerScaleValue: document.querySelector("#layer-scale-value"),
-  layerOffsetXLabel: document.querySelector("#layer-offset-x-label"),
-  layerOffsetXInput: document.querySelector("#layer-offset-x-input"),
-  layerOffsetYLabel: document.querySelector("#layer-offset-y-label"),
-  layerOffsetYInput: document.querySelector("#layer-offset-y-input"),
   cameraTitle: document.querySelector("#camera-title"),
   cameraPresetTitle: document.querySelector("#camera-preset-title"),
   cameraPresetLabel: document.querySelector("#camera-preset-label"),
@@ -493,7 +467,6 @@ function handleLayerMove(layerId, direction) {
 
 function handleLayerSelect(layerId) {
   state.selectedLayerId = layerId;
-  state.activeTab = "layer";
   renderAll();
 }
 
@@ -602,11 +575,6 @@ function handleLanguageChange(locale) {
   renderAll();
 }
 
-function handleTabChange(tabId) {
-  state.activeTab = tabId;
-  renderAll();
-}
-
 function handleAutoDepth() {
   if (state.layers.length === 0) {
     return;
@@ -623,7 +591,6 @@ async function handleExport() {
   }
 
   animation.pause();
-  state.activeTab = "preview";
   revokeExportDownload();
   state.export.isRendering = true;
   state.export.progress = 0;
@@ -753,7 +720,6 @@ const ui = createUI({
     onExportSmoothChange: handleExportSmoothChange,
     onLanguageChange: handleLanguageChange,
     onCameraPresetChange: handleCameraPresetChange,
-    onTabChange: handleTabChange,
     onAutoDepth: handleAutoDepth,
     onExport: handleExport,
   },

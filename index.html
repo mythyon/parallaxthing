@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Parallax Thing</title>
     <script>
-      const APP_VERSION = "20260629-29";
+      const APP_VERSION = "20260629-42";
       const head = document.head;
 
       const styleLink = document.createElement("link");
@@ -42,7 +42,6 @@
       <h1 id="topbar-title" class="topbar-title">Parallax Thing</h1>
 
       <div class="lang-switch" role="group" aria-label="Language switcher">
-        <span id="lang-label" class="lang-label">Language</span>
         <div class="lang-buttons">
           <button id="lang-en-button" class="lang-button" type="button">EN</button>
           <button id="lang-ru-button" class="lang-button" type="button">RU</button>
@@ -64,7 +63,7 @@
           <div id="stack-block" class="stack-block" hidden style="display: none;">
             <div class="section-heading">
               <h2 id="stack-title" class="section-title">Layers</h2>
-              <button id="auto-depth-button" class="mini-button" type="button">Auto speed</button>
+              <button id="auto-depth-button" class="mini-button mini-button-accent" type="button">Auto speed</button>
             </div>
             <div id="layer-list" class="layer-list empty">
               <p id="layer-list-empty" class="empty-state">No layers yet.</p>
@@ -74,14 +73,7 @@
       </aside>
 
       <main class="workspace">
-        <nav id="workspace-tabs" class="tab-bar" aria-label="Workspace sections" role="tablist">
-          <button id="tab-preview" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="tab-panel-preview">Preview</button>
-          <button id="tab-layer" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-panel-layer">Layer</button>
-          <button id="tab-motion" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-panel-motion">Motion</button>
-        </nav>
-
-        <div class="tab-panels">
-          <section id="tab-panel-preview" class="panel preview-panel tab-panel" data-tab-panel="preview" role="tabpanel">
+          <section class="panel preview-panel">
             <h2 id="preview-title" class="section-title">Preview</h2>
 
             <div id="canvas-frame" class="canvas-frame">
@@ -100,6 +92,64 @@
                 <input id="timeline-input" type="range" min="0" max="1000" value="0">
               </label>
             </div>
+
+            <details id="motion-disclosure" class="subpanel motion-disclosure">
+              <summary class="disclosure-summary">
+                <h2 id="camera-title" class="section-title disclosure-title">Motion Setup</h2>
+              </summary>
+
+              <div class="settings-stack disclosure-content">
+                <div class="subpanel">
+                  <p id="camera-preset-title" class="subheading">Animation Preset</p>
+                  <label class="field">
+                    <span id="camera-preset-label">Preset</span>
+                    <select id="camera-preset-input">
+                      <option id="camera-preset-left" value="move-left">Move Left</option>
+                      <option id="camera-preset-right" value="move-right">Move Right</option>
+                      <option id="camera-preset-zoom" value="zoom-in">Zoom In</option>
+                      <option id="camera-preset-custom" value="custom">Custom</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="subpanel">
+                  <p id="camera-start-title" class="subheading">Start</p>
+                  <div class="triple-field-grid">
+                    <label class="field">
+                      <span id="camera-start-x-label">X</span>
+                      <input id="camera-start-x-input" type="number" min="-1500" max="1500" step="1">
+                    </label>
+                    <label class="field">
+                      <span id="camera-start-y-label">Y</span>
+                      <input id="camera-start-y-input" type="number" min="-1500" max="1500" step="1">
+                    </label>
+                    <label class="field">
+                      <span id="camera-start-zoom-label">Zoom</span>
+                      <input id="camera-start-zoom-input" type="number" min="0.2" max="3" step="0.01">
+                    </label>
+                  </div>
+                </div>
+
+                <div class="subpanel">
+                  <p id="camera-end-title" class="subheading">End</p>
+                  <div class="triple-field-grid">
+                    <label class="field">
+                      <span id="camera-end-x-label">X</span>
+                      <input id="camera-end-x-input" type="number" min="-1500" max="1500" step="1">
+                    </label>
+                    <label class="field">
+                      <span id="camera-end-y-label">Y</span>
+                      <input id="camera-end-y-input" type="number" min="-1500" max="1500" step="1">
+                    </label>
+                    <label class="field">
+                      <span id="camera-end-zoom-label">Zoom</span>
+                      <input id="camera-end-zoom-input" type="number" min="0.2" max="3" step="0.01">
+                    </label>
+                  </div>
+                </div>
+
+              </div>
+            </details>
 
             <div class="preview-settings-grid">
               <div class="subpanel">
@@ -185,128 +235,6 @@
               </div>
             </div>
           </section>
-
-          <section id="tab-panel-layer" class="panel tab-panel" data-tab-panel="layer" role="tabpanel" hidden>
-            <h2 id="layer-editor-title" class="section-title">Layer Controls</h2>
-
-            <div id="layer-editor-empty" class="editor-empty">
-              <p id="layer-editor-empty-title" class="info-title">Select a layer</p>
-              <p id="layer-editor-empty-text" class="muted">Load PNG files and click a layer card to edit speed, scale, and offsets.</p>
-            </div>
-
-            <div id="layer-editor-form" class="editor-form" hidden>
-              <div class="editor-header">
-                <div>
-                  <p id="selected-layer-label" class="section-label">Selected Layer</p>
-                  <h3 id="layer-editor-name">Layer</h3>
-                </div>
-                <p id="selected-layer-meta" class="muted"></p>
-              </div>
-
-              <div class="editor-grid">
-                <label class="field field-wide">
-                  <span id="layer-depth-label">Speed</span>
-                  <div class="range-row">
-                    <input id="layer-depth-input" type="range" min="0" max="100" step="1">
-                    <output id="layer-depth-value" class="value-pill">0</output>
-                  </div>
-                </label>
-
-                <label class="field field-wide">
-                  <span id="layer-scale-label">Scale</span>
-                  <div class="range-row">
-                    <input id="layer-scale-input" type="range" min="50" max="300" step="1">
-                    <output id="layer-scale-value" class="value-pill">100%</output>
-                  </div>
-                </label>
-
-                <label class="field">
-                  <span id="layer-offset-x-label">Offset X</span>
-                  <input id="layer-offset-x-input" type="number" min="-2000" max="2000" step="1">
-                </label>
-
-                <label class="field">
-                  <span id="layer-offset-y-label">Offset Y</span>
-                  <input id="layer-offset-y-input" type="number" min="-2000" max="2000" step="1">
-                </label>
-              </div>
-            </div>
-          </section>
-
-          <section id="tab-panel-motion" class="panel tab-panel" data-tab-panel="motion" role="tabpanel" hidden>
-            <h2 id="camera-title" class="section-title">Motion Setup</h2>
-
-            <div class="settings-stack">
-              <div class="subpanel">
-                <p id="camera-preset-title" class="subheading">Animation Preset</p>
-                <label class="field">
-                  <span id="camera-preset-label">Preset</span>
-                  <select id="camera-preset-input">
-                    <option id="camera-preset-left" value="move-left">Move Left</option>
-                    <option id="camera-preset-right" value="move-right">Move Right</option>
-                    <option id="camera-preset-zoom" value="zoom-in">Zoom In</option>
-                    <option id="camera-preset-custom" value="custom">Custom</option>
-                  </select>
-                </label>
-              </div>
-
-              <div class="subpanel">
-                <p id="camera-start-title" class="subheading">Start</p>
-                <div class="triple-field-grid">
-                  <label class="field">
-                    <span id="camera-start-x-label">X</span>
-                    <input id="camera-start-x-input" type="number" min="-1500" max="1500" step="1">
-                  </label>
-                  <label class="field">
-                    <span id="camera-start-y-label">Y</span>
-                    <input id="camera-start-y-input" type="number" min="-1500" max="1500" step="1">
-                  </label>
-                  <label class="field">
-                    <span id="camera-start-zoom-label">Zoom</span>
-                    <input id="camera-start-zoom-input" type="number" min="0.2" max="3" step="0.01">
-                  </label>
-                </div>
-              </div>
-
-              <div class="subpanel">
-                <p id="camera-end-title" class="subheading">End</p>
-                <div class="triple-field-grid">
-                  <label class="field">
-                    <span id="camera-end-x-label">X</span>
-                    <input id="camera-end-x-input" type="number" min="-1500" max="1500" step="1">
-                  </label>
-                  <label class="field">
-                    <span id="camera-end-y-label">Y</span>
-                    <input id="camera-end-y-input" type="number" min="-1500" max="1500" step="1">
-                  </label>
-                  <label class="field">
-                    <span id="camera-end-zoom-label">Zoom</span>
-                    <input id="camera-end-zoom-input" type="number" min="0.2" max="3" step="0.01">
-                  </label>
-                </div>
-              </div>
-
-              <div class="subpanel">
-                <p id="camera-motion-title" class="subheading">Timing</p>
-                <div class="field-grid">
-                  <label class="field">
-                    <span id="camera-duration-label">Duration</span>
-                    <input id="camera-duration-input" type="number" min="1" max="60" step="0.5">
-                  </label>
-                  <label class="field">
-                    <span id="camera-easing-label">Easing</span>
-                    <select id="camera-easing-input">
-                      <option id="camera-easing-linear" value="linear">Linear</option>
-                      <option id="camera-easing-ease-in" value="ease-in">Ease In</option>
-                      <option id="camera-easing-ease-out" value="ease-out">Ease Out</option>
-                      <option id="camera-easing-ease-in-out" value="ease-in-out">Ease In Out</option>
-                    </select>
-                  </label>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
       </main>
     </div>
   </body>
