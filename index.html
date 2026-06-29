@@ -1,0 +1,313 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Parallax Thing</title>
+    <script>
+      const APP_VERSION = "20260629-29";
+      const head = document.head;
+
+      const styleLink = document.createElement("link");
+      styleLink.rel = "stylesheet";
+      styleLink.href = `./styles.css?v=${APP_VERSION}`;
+      head.appendChild(styleLink);
+
+      const importMap = document.createElement("script");
+      importMap.type = "importmap";
+      importMap.textContent = JSON.stringify({
+        imports: {
+          app: `./src/main.js?v=${APP_VERSION}`,
+          animation: `./src/animation.js?v=${APP_VERSION}`,
+          camera: `./src/camera.js?v=${APP_VERSION}`,
+          exporter: `./src/exporter.js?v=${APP_VERSION}`,
+          i18n: `./src/i18n.js?v=${APP_VERSION}`,
+          layers: `./src/layers.js?v=${APP_VERSION}`,
+          loader: `./src/loader.js?v=${APP_VERSION}`,
+          renderer: `./src/renderer.js?v=${APP_VERSION}`,
+          ui: `./src/ui.js?v=${APP_VERSION}`,
+          utils: `./src/utils.js?v=${APP_VERSION}`
+        }
+      });
+      head.appendChild(importMap);
+
+      const entryScript = document.createElement("script");
+      entryScript.type = "module";
+      entryScript.textContent = 'import "app";';
+      head.appendChild(entryScript);
+    </script>
+  </head>
+  <body>
+    <header class="topbar">
+      <h1 id="topbar-title" class="topbar-title">Parallax Thing</h1>
+
+      <div class="lang-switch" role="group" aria-label="Language switcher">
+        <span id="lang-label" class="lang-label">Language</span>
+        <div class="lang-buttons">
+          <button id="lang-en-button" class="lang-button" type="button">EN</button>
+          <button id="lang-ru-button" class="lang-button" type="button">RU</button>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-shell">
+      <aside class="sidebar">
+        <section class="panel sidebar-panel">
+          <button id="dropzone" class="dropzone" type="button">
+            <span id="dropzone-title" class="dropzone-title">Drop PNG layers here</span>
+            <span id="dropzone-subtitle" class="dropzone-subtitle">or click to choose files</span>
+          </button>
+          <input id="file-input" type="file" accept="image/png" multiple hidden>
+
+          <p id="status-message" class="status-message">Load PNG files to start editing layers.</p>
+
+          <div id="stack-block" class="stack-block" hidden style="display: none;">
+            <div class="section-heading">
+              <h2 id="stack-title" class="section-title">Layers</h2>
+              <button id="auto-depth-button" class="mini-button" type="button">Auto speed</button>
+            </div>
+            <div id="layer-list" class="layer-list empty">
+              <p id="layer-list-empty" class="empty-state">No layers yet.</p>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <main class="workspace">
+        <nav id="workspace-tabs" class="tab-bar" aria-label="Workspace sections" role="tablist">
+          <button id="tab-preview" class="tab-button" type="button" role="tab" aria-selected="true" aria-controls="tab-panel-preview">Preview</button>
+          <button id="tab-layer" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-panel-layer">Layer</button>
+          <button id="tab-motion" class="tab-button" type="button" role="tab" aria-selected="false" aria-controls="tab-panel-motion">Motion</button>
+        </nav>
+
+        <div class="tab-panels">
+          <section id="tab-panel-preview" class="panel preview-panel tab-panel" data-tab-panel="preview" role="tabpanel">
+            <h2 id="preview-title" class="section-title">Preview</h2>
+
+            <div id="canvas-frame" class="canvas-frame">
+              <canvas id="preview-canvas" width="1280" height="720" aria-label="Preview canvas"></canvas>
+            </div>
+
+            <div class="transport">
+              <div class="transport-buttons">
+                <button id="play-button" class="action-button icon-action" type="button" aria-label="Play" title="Play"></button>
+                <button id="pause-button" class="action-button icon-action" type="button" aria-label="Pause" title="Pause"></button>
+                <button id="stop-button" class="action-button ghost icon-action" type="button" aria-label="Stop" title="Stop"></button>
+              </div>
+
+              <label class="timeline">
+                <span id="time-label">00:00 / 00:06</span>
+                <input id="timeline-input" type="range" min="0" max="1000" value="0">
+              </label>
+            </div>
+
+            <div class="preview-settings-grid">
+              <div class="subpanel">
+                <p id="scene-title" class="subheading">Settings</p>
+
+                <label class="field">
+                  <span id="viewport-label">Viewport</span>
+                  <div id="viewport-picker" class="icon-choice-group" role="group" aria-label="Viewport format">
+                    <button id="viewport-landscape-button" class="icon-choice" type="button" aria-label="Landscape" title="Landscape"></button>
+                    <button id="viewport-portrait-button" class="icon-choice" type="button" aria-label="Portrait" title="Portrait"></button>
+                    <button id="viewport-square-button" class="icon-choice" type="button" aria-label="Square" title="Square"></button>
+                  </div>
+                </label>
+
+                <div class="field-grid">
+                  <label class="field">
+                    <span id="bg-color-label">Background</span>
+                    <input id="bg-color-input" type="color" value="#ffffff">
+                  </label>
+
+                  <label class="field">
+                    <span id="fit-mode-label">Layer Placement</span>
+                    <select id="fit-mode-input">
+                      <option id="fit-mode-none" value="none">Original size</option>
+                      <option id="fit-mode-contain" value="contain">Auto fit</option>
+                    </select>
+                  </label>
+                </div>
+
+                <div class="field-grid">
+                  <label class="field">
+                    <span id="camera-duration-label-preview">Duration, sec</span>
+                    <input id="camera-duration-input-preview" type="number" min="1" max="60" step="0.5">
+                  </label>
+
+                  <label class="field">
+                    <span id="camera-easing-label-preview">Easing</span>
+                    <select id="camera-easing-input-preview">
+                      <option id="camera-easing-linear-preview" value="linear">Linear</option>
+                      <option id="camera-easing-ease-in-preview" value="ease-in">Ease In</option>
+                      <option id="camera-easing-ease-out-preview" value="ease-out">Ease Out</option>
+                      <option id="camera-easing-ease-in-out-preview" value="ease-in-out">Ease In Out</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+
+              <div class="subpanel">
+                <p id="export-title" class="subheading">Export</p>
+
+                <div class="field-grid">
+                  <label class="field">
+                    <span id="export-quality-label">Quality</span>
+                    <select id="export-quality-input">
+                      <option id="export-quality-1080" value="1080p">1080p</option>
+                      <option id="export-quality-720" value="720p">720p</option>
+                    </select>
+                  </label>
+                  <label class="field">
+                    <span id="export-fps-label">FPS</span>
+                    <select id="export-fps-input">
+                      <option id="export-fps-30" value="30">30 FPS</option>
+                      <option id="export-fps-60" value="60">60 FPS</option>
+                    </select>
+                  </label>
+                  <label class="check-field field-wide" for="export-smooth-input">
+                    <input id="export-smooth-input" type="checkbox">
+                    <span id="export-smooth-label">More smooth</span>
+                  </label>
+                </div>
+
+                <div id="export-progress" class="export-progress" hidden>
+                  <progress id="export-progress-bar" max="100" value="0"></progress>
+                  <span id="export-progress-value">0%</span>
+                </div>
+
+                <p id="export-note" class="muted export-note">WebM | 1920x1080 | 30 FPS</p>
+                <button id="export-button" class="action-button" type="button" disabled>Export WebM</button>
+                <div id="export-download" class="export-download is-hidden" hidden aria-hidden="true" style="display: none !important;">
+                  <p id="export-download-label" class="muted export-download-label">Direct blob link</p>
+                  <a id="export-download-link" class="export-download-link" href="#" download>Download exported file</a>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section id="tab-panel-layer" class="panel tab-panel" data-tab-panel="layer" role="tabpanel" hidden>
+            <h2 id="layer-editor-title" class="section-title">Layer Controls</h2>
+
+            <div id="layer-editor-empty" class="editor-empty">
+              <p id="layer-editor-empty-title" class="info-title">Select a layer</p>
+              <p id="layer-editor-empty-text" class="muted">Load PNG files and click a layer card to edit speed, scale, and offsets.</p>
+            </div>
+
+            <div id="layer-editor-form" class="editor-form" hidden>
+              <div class="editor-header">
+                <div>
+                  <p id="selected-layer-label" class="section-label">Selected Layer</p>
+                  <h3 id="layer-editor-name">Layer</h3>
+                </div>
+                <p id="selected-layer-meta" class="muted"></p>
+              </div>
+
+              <div class="editor-grid">
+                <label class="field field-wide">
+                  <span id="layer-depth-label">Speed</span>
+                  <div class="range-row">
+                    <input id="layer-depth-input" type="range" min="0" max="100" step="1">
+                    <output id="layer-depth-value" class="value-pill">0</output>
+                  </div>
+                </label>
+
+                <label class="field field-wide">
+                  <span id="layer-scale-label">Scale</span>
+                  <div class="range-row">
+                    <input id="layer-scale-input" type="range" min="50" max="300" step="1">
+                    <output id="layer-scale-value" class="value-pill">100%</output>
+                  </div>
+                </label>
+
+                <label class="field">
+                  <span id="layer-offset-x-label">Offset X</span>
+                  <input id="layer-offset-x-input" type="number" min="-2000" max="2000" step="1">
+                </label>
+
+                <label class="field">
+                  <span id="layer-offset-y-label">Offset Y</span>
+                  <input id="layer-offset-y-input" type="number" min="-2000" max="2000" step="1">
+                </label>
+              </div>
+            </div>
+          </section>
+
+          <section id="tab-panel-motion" class="panel tab-panel" data-tab-panel="motion" role="tabpanel" hidden>
+            <h2 id="camera-title" class="section-title">Motion Setup</h2>
+
+            <div class="settings-stack">
+              <div class="subpanel">
+                <p id="camera-preset-title" class="subheading">Animation Preset</p>
+                <label class="field">
+                  <span id="camera-preset-label">Preset</span>
+                  <select id="camera-preset-input">
+                    <option id="camera-preset-left" value="move-left">Move Left</option>
+                    <option id="camera-preset-right" value="move-right">Move Right</option>
+                    <option id="camera-preset-zoom" value="zoom-in">Zoom In</option>
+                    <option id="camera-preset-custom" value="custom">Custom</option>
+                  </select>
+                </label>
+              </div>
+
+              <div class="subpanel">
+                <p id="camera-start-title" class="subheading">Start</p>
+                <div class="triple-field-grid">
+                  <label class="field">
+                    <span id="camera-start-x-label">X</span>
+                    <input id="camera-start-x-input" type="number" min="-1500" max="1500" step="1">
+                  </label>
+                  <label class="field">
+                    <span id="camera-start-y-label">Y</span>
+                    <input id="camera-start-y-input" type="number" min="-1500" max="1500" step="1">
+                  </label>
+                  <label class="field">
+                    <span id="camera-start-zoom-label">Zoom</span>
+                    <input id="camera-start-zoom-input" type="number" min="0.2" max="3" step="0.01">
+                  </label>
+                </div>
+              </div>
+
+              <div class="subpanel">
+                <p id="camera-end-title" class="subheading">End</p>
+                <div class="triple-field-grid">
+                  <label class="field">
+                    <span id="camera-end-x-label">X</span>
+                    <input id="camera-end-x-input" type="number" min="-1500" max="1500" step="1">
+                  </label>
+                  <label class="field">
+                    <span id="camera-end-y-label">Y</span>
+                    <input id="camera-end-y-input" type="number" min="-1500" max="1500" step="1">
+                  </label>
+                  <label class="field">
+                    <span id="camera-end-zoom-label">Zoom</span>
+                    <input id="camera-end-zoom-input" type="number" min="0.2" max="3" step="0.01">
+                  </label>
+                </div>
+              </div>
+
+              <div class="subpanel">
+                <p id="camera-motion-title" class="subheading">Timing</p>
+                <div class="field-grid">
+                  <label class="field">
+                    <span id="camera-duration-label">Duration</span>
+                    <input id="camera-duration-input" type="number" min="1" max="60" step="0.5">
+                  </label>
+                  <label class="field">
+                    <span id="camera-easing-label">Easing</span>
+                    <select id="camera-easing-input">
+                      <option id="camera-easing-linear" value="linear">Linear</option>
+                      <option id="camera-easing-ease-in" value="ease-in">Ease In</option>
+                      <option id="camera-easing-ease-out" value="ease-out">Ease Out</option>
+                      <option id="camera-easing-ease-in-out" value="ease-in-out">Ease In Out</option>
+                    </select>
+                  </label>
+                </div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+  </body>
+</html>
