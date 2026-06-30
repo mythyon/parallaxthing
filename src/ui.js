@@ -135,6 +135,7 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.cameraPresetLeft.textContent = t("presetMoveLeft");
     elements.cameraPresetRight.textContent = t("presetMoveRight");
     elements.cameraPresetZoom.textContent = t("presetZoomIn");
+    elements.cameraPresetZoomOut.textContent = t("presetZoomInOut");
     elements.cameraPresetCustom.textContent = t("presetCustom");
     elements.cameraStartTitle.textContent = t("cameraStartTitle");
     elements.cameraEndTitle.textContent = t("cameraEndTitle");

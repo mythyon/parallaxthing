@@ -62,6 +62,13 @@ const CAMERA_PRESETS = {
     duration: 6,
     easing: "ease-in-out",
   },
+  "zoom-in-out": {
+    start: { x: 0, y: 0, zoom: 1 },
+    end: { x: 0, y: 0, zoom: 1.28 },
+    duration: 6,
+    easing: "ease-in-out",
+    motion: "zoom-in-pause-out",
+  },
 };
 
 function isPngCandidate(file) {
@@ -139,6 +146,7 @@ const elements = {
   cameraPresetLeft: document.querySelector("#camera-preset-left"),
   cameraPresetRight: document.querySelector("#camera-preset-right"),
   cameraPresetZoom: document.querySelector("#camera-preset-zoom"),
+  cameraPresetZoomOut: document.querySelector("#camera-preset-zoom-out"),
   cameraPresetCustom: document.querySelector("#camera-preset-custom"),
   cameraStartTitle: document.querySelector("#camera-start-title"),
   cameraStartXLabel: document.querySelector("#camera-start-x-label"),
@@ -237,6 +245,7 @@ function applyCameraPreset(presetId) {
   state.camera.end = { ...preset.end };
   state.camera.duration = preset.duration;
   state.camera.easing = preset.easing;
+  state.camera.motion = preset.motion ?? "standard";
 }
 
 function getViewportConfig(

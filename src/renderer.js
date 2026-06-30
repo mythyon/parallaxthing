@@ -49,7 +49,8 @@ export function drawScene(context, {
     const baseScale = state.preview.fitMode === "contain"
       ? resolveContainScale(layer.width, layer.height, width, height)
       : 1;
-    const combinedScale = baseScale * (layer.scale / 100) * camera.zoom;
+    const zoomStrength = 1 + ((camera.zoom - 1) * depthWeight);
+    const combinedScale = baseScale * (layer.scale / 100) * zoomStrength;
     const renderWidth = layer.width * combinedScale;
     const renderHeight = layer.height * combinedScale;
     const parallaxStrength = 0.1 + depthWeight * 1.2;
