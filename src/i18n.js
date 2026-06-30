@@ -4,7 +4,6 @@ const translations = {
   en: {
     docTitle: "Parallax Thing",
     topbarTitle: "Parallax Thing",
-    langLabel: "Language",
     langSwitcherAria: "Language switcher",
     workspaceTabsAria: "Workspace sections",
     dropzoneTitle: "Drop PNG layers here",
@@ -37,7 +36,6 @@ const translations = {
     presetCustom: "Custom",
     cameraStartTitle: "Start",
     cameraEndTitle: "End",
-    cameraMotionTitle: "Timing",
     cameraStartXLabel: "X",
     cameraStartYLabel: "Y",
     cameraStartZoomLabel: "Zoom",
@@ -100,7 +98,6 @@ const translations = {
   ru: {
     docTitle: "Parallax Thing",
     topbarTitle: "Parallax Thing",
-    langLabel: "Язык",
     langSwitcherAria: "Переключатель языка",
     workspaceTabsAria: "Разделы рабочей области",
     dropzoneTitle: "Перетащите PNG-слои сюда",
@@ -133,7 +130,6 @@ const translations = {
     presetCustom: "Своя",
     cameraStartTitle: "Старт",
     cameraEndTitle: "Финиш",
-    cameraMotionTitle: "Тайминг",
     cameraStartXLabel: "X",
     cameraStartYLabel: "Y",
     cameraStartZoomLabel: "Масштаб",

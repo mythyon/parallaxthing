@@ -45,7 +45,7 @@ export function drawScene(context, {
   const centerY = height / 2;
 
   for (const layer of [...state.layers].reverse()) {
-    const depthWeight = clamp(layer.depth / 100, 0, 1);
+    const depthWeight = clamp(layer.depth / 100, 0, 2);
     const baseScale = state.preview.fitMode === "contain"
       ? resolveContainScale(layer.width, layer.height, width, height)
       : 1;
