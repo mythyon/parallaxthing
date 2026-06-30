@@ -1,8 +1,8 @@
 :root {
-  --bg: #f3efe7;
-  --bg-accent: #dff4e6;
-  --panel: rgba(255, 251, 245, 0.88);
-  --panel-strong: rgba(255, 248, 239, 0.96);
+  --bg: #eef2f4;
+  --bg-accent: #e2f0e7;
+  --panel: rgba(250, 252, 253, 0.9);
+  --panel-strong: rgba(255, 255, 255, 0.97);
   --line: rgba(38, 45, 61, 0.12);
   --line-strong: rgba(38, 45, 61, 0.2);
   --text: #18202f;
@@ -31,7 +31,7 @@ body {
   margin: 0;
   font-family: var(--font-body);
   color: var(--text);
-  background: #f4f1ea;
+  background: #edf1f3;
 }
 
 button,

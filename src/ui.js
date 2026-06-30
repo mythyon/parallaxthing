@@ -28,8 +28,8 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
       <label class="field field-wide layer-inline-range-field">
         <span>${t("layerDepthLabel")}</span>
         <div class="range-row">
-          <input type="range" min="0" max="100" step="1" value="${layer.depth}" data-layer-field="depth">
-          <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.depth}" data-layer-field="depth">
+          <input type="range" min="0" max="200" step="1" value="${layer.depth}" data-layer-field="depth">
+          <input class="value-pill value-input" type="number" min="0" max="200" step="1" value="${layer.depth}" data-layer-field="depth">
         </div>
       </label>
 

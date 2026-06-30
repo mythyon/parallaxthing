@@ -34,7 +34,7 @@ const VIEWPORT_PRESETS = {
   },
 };
 const LAYER_LIMITS = {
-  depth: { min: 0, max: 100 },
+  depth: { min: 0, max: 200 },
   scale: { min: 50, max: 300 },
   offset: { min: -2000, max: 2000 },
 };
