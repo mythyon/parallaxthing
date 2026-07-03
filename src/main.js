@@ -606,6 +606,10 @@ function handleLayerChange(field, rawValue) {
     patch = {
       opacity: clampNumber(rawValue, LAYER_LIMITS.opacity.min, LAYER_LIMITS.opacity.max, selectedLayer.opacity),
     };
+  } else if (field === "sunGlowEnabled" && isEffectLayer(selectedLayer)) {
+    patch = {
+      sunGlowEnabled: Boolean(rawValue),
+    };
   } else if (field === "raySpeed" && isEffectLayer(selectedLayer)) {
     patch = {
       raySpeed: clampNumber(rawValue, LAYER_LIMITS.raySpeed.min, LAYER_LIMITS.raySpeed.max, selectedLayer.raySpeed),
@@ -821,6 +825,11 @@ function handleCanvasPointerDown(event) {
   const selectedLayer = getSelectedLayer();
 
   if (!selectedLayer) {
+    if (state.layers.length === 0) {
+      elements.fileInput.click();
+      event.preventDefault();
+    }
+
     return;
   }
 

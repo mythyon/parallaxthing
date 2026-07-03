@@ -959,8 +959,7 @@ h3 {
   .editor-grid,
   .triple-field-grid,
   .motion-top-grid,
-  .motion-scene-grid,
-  .layer-inline-grid {
+  .motion-scene-grid {
     grid-template-columns: 1fr;
   }
 
@@ -1092,6 +1091,11 @@ h3 {
     padding: 0 7px;
     border-radius: 8px;
     font-size: 14px;
+  }
+
+  .layer-inline-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px 8px;
   }
 
   .field select {

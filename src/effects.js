@@ -158,6 +158,7 @@ function createFlareContainer(PIXI, textures, layer, scene) {
   const centerY = (height / 2) + offsetY;
   const tint = hexToNumber(layer.tint);
   const alpha = clamp(layer.opacity / 100, 0, 1);
+  const sunGlowEnabled = Boolean(layer.sunGlowEnabled);
   const container = new PIXI.Container();
   const addBlendMode = "add";
   const primaryRotation = rotationOffset + (progress * Math.PI * 2 * 0.14 * rotationSpeed) + (depthWeight * 0.08);
@@ -204,6 +205,43 @@ function createFlareContainer(PIXI, textures, layer, scene) {
   });
 
   container.alpha = alpha;
+
+  if (sunGlowEnabled) {
+    const ambientWash = createGhostSprite(PIXI, textures.glow, {
+      x: centerX - (scale * 26),
+      y: centerY + (scale * 14),
+      scaleX: scale * (7.2 + (rayBlur * 2.4)),
+      scaleY: scale * (5.5 + (rayBlur * 1.8)),
+      alpha: (0.16 + (rayBlur * 0.05)) * pulse,
+      tint,
+      blendMode: addBlendMode,
+      rotation: lensAngle * 0.14,
+    });
+    container.addChild(ambientWash);
+
+    const sunBloom = createGhostSprite(PIXI, textures.glow, {
+      x: centerX + (scale * 18),
+      y: centerY - (scale * 10),
+      scaleX: scale * (5.8 + (rayBlur * 1.6)),
+      scaleY: scale * (4.7 + (rayBlur * 1.3)),
+      alpha: (0.1 + (rayBlur * 0.04)) * pulse,
+      tint,
+      blendMode: addBlendMode,
+    });
+    container.addChild(sunBloom);
+
+    const lightVeil = createGhostSprite(PIXI, textures.streak, {
+      x: centerX - (scale * 10),
+      y: centerY,
+      scaleX: scale * 8.8,
+      scaleY: scale * (1.12 + (rayThickness * 0.0022) + (rayBlur * 0.3)),
+      alpha: (0.05 + (rayBlur * 0.03)) * pulse,
+      tint,
+      blendMode: addBlendMode,
+      rotation: lensAngle * 0.2,
+    });
+    container.addChild(lightVeil);
+  }
 
   const atmosphere = createGhostSprite(PIXI, textures.glow, {
     x: centerX,

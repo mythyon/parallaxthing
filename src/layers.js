@@ -50,6 +50,7 @@ export function createEffectLayer() {
     depth: 56,
     scale: 100,
     opacity: 72,
+    sunGlowEnabled: false,
     raySpeed: 100,
     rayLength: 100,
     rayCount: 8,

@@ -68,6 +68,11 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
         </summary>
 
         <div class="layer-effect-content">
+          <label class="check-field field-wide">
+            <input type="checkbox" data-layer-field="sunGlowEnabled" ${layer.sunGlowEnabled ? "checked" : ""}>
+            <span>${t("effectSunGlowLabel")}</span>
+          </label>
+
           <label class="field field-wide layer-inline-range-field">
             <span>${t("effectOpacityLabel")}</span>
             <div class="range-row">
@@ -276,7 +281,9 @@ export function createUI({ state, elements, callbacks, i18n }) {
       return;
     }
 
-    const shouldShowIndicator = state.layers.length > 5;
+    const clientHeight = elements.layerList.clientHeight;
+    const scrollHeight = elements.layerList.scrollHeight;
+    const shouldShowIndicator = scrollHeight > clientHeight + 1;
     layerListShell.classList.toggle("is-scrollable", shouldShowIndicator);
 
     if (!shouldShowIndicator) {
@@ -285,8 +292,6 @@ export function createUI({ state, elements, callbacks, i18n }) {
       return;
     }
 
-    const clientHeight = elements.layerList.clientHeight;
-    const scrollHeight = elements.layerList.scrollHeight;
     const trackHeight = Math.max(0, clientHeight - 8);
 
     if (!clientHeight || scrollHeight <= clientHeight) {
@@ -562,7 +567,10 @@ export function createUI({ state, elements, callbacks, i18n }) {
       return;
     }
 
-    callbacks.onLayerChange(field, event.target.value);
+    callbacks.onLayerChange(
+      field,
+      event.target.type === "checkbox" ? event.target.checked : event.target.value,
+    );
   });
 
   elements.layerList.addEventListener("scroll", updateLayerListScrollIndicator, { passive: true });
