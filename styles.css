@@ -1046,8 +1046,8 @@ h3 {
   .lang-button {
     min-width: 28px;
     min-height: 22px;
-    padding: 0 5px;
-    font-size: 0.95rem;
+    padding: 4px 11px;
+    font-size: 12px;
   }
 
   .app-shell {

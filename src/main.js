@@ -123,6 +123,10 @@ const state = {
     touchPoints: new Map(),
     pinchStartDistance: 0,
     pinchStartScale: 100,
+    pinchStartCenterX: 0,
+    pinchStartCenterY: 0,
+    pinchStartOffsetX: 0,
+    pinchStartOffsetY: 0,
     targetScale: 100,
     scaleX: 1,
     scaleY: 1,
@@ -263,6 +267,20 @@ function getTouchDistance(touchPoints) {
   return Math.hypot(second.clientX - first.clientX, second.clientY - first.clientY);
 }
 
+function getTouchCenter(touchPoints) {
+  const points = Array.from(touchPoints.values());
+
+  if (points.length < 2) {
+    return null;
+  }
+
+  const [first, second] = points;
+  return {
+    clientX: (first.clientX + second.clientX) / 2,
+    clientY: (first.clientY + second.clientY) / 2,
+  };
+}
+
 function beginCanvasGesture() {
   document.body.classList.add("is-layer-dragging");
 }
@@ -275,6 +293,10 @@ function resetCanvasGestureState() {
   state.drag.touchPoints.clear();
   state.drag.pinchStartDistance = 0;
   state.drag.pinchStartScale = 100;
+  state.drag.pinchStartCenterX = 0;
+  state.drag.pinchStartCenterY = 0;
+  state.drag.pinchStartOffsetX = 0;
+  state.drag.pinchStartOffsetY = 0;
   state.drag.frameId = 0;
   document.body.classList.remove("is-layer-dragging");
 }
@@ -734,7 +756,7 @@ function handleAddEffect() {
   }
 
   const effectLayer = createEffectLayer();
-  insertLayerAfterSelection(effectLayer);
+  state.layers = [effectLayer, ...state.layers];
   state.selectedLayerId = effectLayer.id;
   state.playback.isPlaying = false;
   setStatus(createStatusEntry("statusEffectAdded"), "success");
@@ -823,11 +845,16 @@ function handleCanvasPointerDown(event) {
     state.drag.targetScale = selectedLayer.scale;
 
     if (state.drag.touchPoints.size >= 2) {
+      const touchCenter = getTouchCenter(state.drag.touchPoints);
       state.drag.pointerId = null;
       state.drag.isDragging = false;
       state.drag.isPinching = true;
       state.drag.pinchStartDistance = getTouchDistance(state.drag.touchPoints);
       state.drag.pinchStartScale = selectedLayer.scale;
+      state.drag.pinchStartCenterX = touchCenter?.clientX ?? event.clientX;
+      state.drag.pinchStartCenterY = touchCenter?.clientY ?? event.clientY;
+      state.drag.pinchStartOffsetX = selectedLayer.offsetX;
+      state.drag.pinchStartOffsetY = selectedLayer.offsetY;
     } else {
       state.drag.pointerId = event.pointerId;
       state.drag.isDragging = true;
@@ -873,6 +900,7 @@ function handleCanvasPointerMove(event) {
     if (state.drag.isPinching && state.drag.touchPoints.size >= 2) {
       const scaleLimits = getScaleLimits(selectedLayer);
       const distance = getTouchDistance(state.drag.touchPoints);
+      const touchCenter = getTouchCenter(state.drag.touchPoints);
       const scaleRatio = state.drag.pinchStartDistance > 0 ? distance / state.drag.pinchStartDistance : 1;
 
       state.drag.targetScale = clampNumber(
@@ -881,6 +909,25 @@ function handleCanvasPointerMove(event) {
         scaleLimits.max,
         selectedLayer.scale,
       );
+
+      if (touchCenter) {
+        const nextOffsetX = state.drag.pinchStartOffsetX + ((touchCenter.clientX - state.drag.pinchStartCenterX) * state.drag.scaleX);
+        const nextOffsetY = state.drag.pinchStartOffsetY + ((touchCenter.clientY - state.drag.pinchStartCenterY) * state.drag.scaleY);
+
+        state.drag.targetOffsetX = clampNumber(
+          nextOffsetX,
+          LAYER_LIMITS.offset.min,
+          LAYER_LIMITS.offset.max,
+          selectedLayer.offsetX,
+        );
+        state.drag.targetOffsetY = clampNumber(
+          nextOffsetY,
+          LAYER_LIMITS.offset.min,
+          LAYER_LIMITS.offset.max,
+          selectedLayer.offsetY,
+        );
+      }
+
       event.preventDefault();
       ensureCanvasDragFrame();
       return;
@@ -946,8 +993,15 @@ function ensureCanvasDragFrame() {
     }
 
     if (state.drag.isPinching) {
+      const nextOffsetX = lerp(selectedLayer.offsetX, state.drag.targetOffsetX, smoothing);
+      const nextOffsetY = lerp(selectedLayer.offsetY, state.drag.targetOffsetY, smoothing);
+      const shouldSnapOffset =
+        Math.abs(state.drag.targetOffsetX - nextOffsetX) < 0.35 &&
+        Math.abs(state.drag.targetOffsetY - nextOffsetY) < 0.35;
       const nextScale = lerp(selectedLayer.scale, state.drag.targetScale, 0.24);
       const shouldSnapScale = Math.abs(state.drag.targetScale - nextScale) < 0.2;
+      patch.offsetX = shouldSnapOffset ? state.drag.targetOffsetX : roundTo(nextOffsetX, 2);
+      patch.offsetY = shouldSnapOffset ? state.drag.targetOffsetY : roundTo(nextOffsetY, 2);
       patch.scale = shouldSnapScale ? state.drag.targetScale : roundTo(nextScale, 2);
     }
 
@@ -993,6 +1047,8 @@ function stopCanvasDrag(pointerId = null, pointerType = "") {
     }
 
     if (state.drag.isPinching) {
+      patch.offsetX = state.drag.targetOffsetX;
+      patch.offsetY = state.drag.targetOffsetY;
       patch.scale = state.drag.targetScale;
     }
 
