@@ -25,6 +25,7 @@
 html,
 body {
   min-height: 100%;
+  overflow-x: hidden;
 }
 
 body {
@@ -56,8 +57,8 @@ button:disabled {
 }
 
 .topbar {
-  display: flex;
-  justify-content: space-between;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
   gap: 14px;
   padding: 16px 18px 0;
@@ -66,8 +67,9 @@ button:disabled {
 .topbar-title {
   margin: 0;
   min-width: 0;
-  flex: 1 1 auto;
-  font-size: clamp(1.125rem, 1.35vw, 1.5rem);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
   font-family: var(--font-display);
   letter-spacing: -0.03em;
 }
@@ -77,6 +79,7 @@ button:disabled {
   align-items: center;
   gap: 0;
   padding: 0;
+  justify-self: end;
 }
 
 .lang-buttons {
@@ -182,6 +185,10 @@ h1 {
   font-size: clamp(1.8rem, 2vw, 2.4rem);
 }
 
+.topbar-title {
+  font-size: clamp(1.125rem, 1.35vw, 1.5rem);
+}
+
 h2 {
   font-size: 1.2rem;
 }
@@ -278,6 +285,10 @@ h3 {
 .layer-list {
   display: grid;
   gap: 8px;
+}
+
+.layer-list-shell {
+  position: relative;
 }
 
 .stack-add-effect-button {
@@ -902,7 +913,6 @@ h3 {
 
 @media (max-width: 820px) {
   .topbar {
-    flex-wrap: nowrap;
     align-items: center;
     gap: 10px;
   }
@@ -912,9 +922,8 @@ h3 {
   }
 
   .lang-switch {
-    flex: 0 0 auto;
     align-self: center;
-    margin-left: auto;
+    justify-self: end;
   }
 
   .editor-header,
@@ -970,7 +979,38 @@ h3 {
   .layer-list {
     max-height: 460px;
     overflow-y: auto;
-    padding-right: 4px;
+    padding-right: 12px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .layer-list::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+  }
+
+  .layer-list-shell.is-scrollable::before {
+    content: "";
+    position: absolute;
+    top: 4px;
+    right: 1px;
+    width: 4px;
+    height: calc(100% - 8px);
+    border-radius: 999px;
+    background: rgba(24, 32, 47, 0.12);
+    pointer-events: none;
+  }
+
+  .layer-list-shell.is-scrollable::after {
+    content: "";
+    position: absolute;
+    top: calc(4px + var(--layer-scroll-thumb-offset, 0px));
+    right: 1px;
+    width: 4px;
+    height: var(--layer-scroll-thumb-size, 36px);
+    border-radius: 999px;
+    background: rgba(0, 180, 79, 0.78);
+    pointer-events: none;
   }
 
   .layer-thumb {
@@ -986,5 +1026,125 @@ h3 {
   .layer-actions {
     grid-column: 1 / -1;
     justify-content: start;
+  }
+}
+
+@media (max-width: 374px) {
+  .topbar {
+    gap: 5px;
+    padding: 8px 8px 0;
+  }
+
+  .topbar-title {
+    font-size: 0.95rem;
+  }
+
+  .lang-buttons {
+    gap: 3px;
+  }
+
+  .lang-button {
+    min-width: 28px;
+    min-height: 22px;
+    padding: 0 5px;
+    font-size: 0.95rem;
+  }
+
+  .app-shell {
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .panel {
+    padding: 10px;
+  }
+
+  .section-title {
+    margin-bottom: 8px;
+    font-size: 1rem;
+  }
+
+  .subheading,
+  .field span,
+  .layer-inline-range-field > span {
+    font-size: 0.78rem;
+  }
+
+  .dropzone {
+    padding: 16px 10px;
+  }
+
+  .dropzone-title {
+    font-size: 0.95rem;
+  }
+
+  .dropzone-subtitle,
+  .status-message,
+  .layer-details,
+  .muted,
+  .empty-state {
+    font-size: 0.82rem;
+  }
+
+  .field input,
+  .field select {
+    min-height: 34px;
+    padding: 0 7px;
+    border-radius: 8px;
+    font-size: 14px;
+  }
+
+  .field select {
+    padding-left: 7px;
+    padding-right: 7px;
+  }
+
+  .mini-button {
+    min-height: 32px;
+    padding: 0 10px;
+    font-size: 0.82rem;
+  }
+
+  .icon-choice,
+  .icon-action {
+    width: 38px;
+    min-height: 38px;
+  }
+
+  .transport-buttons {
+    gap: 8px;
+  }
+
+  .transport-top {
+    gap: 8px;
+  }
+
+  .icon-choice-group {
+    gap: 6px;
+  }
+
+  .layer-card {
+    padding: 8px;
+    gap: 8px;
+  }
+
+  .layer-actions {
+    gap: 5px;
+  }
+
+  .icon-button {
+    width: 34px;
+    height: 34px;
+  }
+
+  .value-pill {
+    min-width: 58px;
+    padding: 5px 6px;
+    font-size: 0.82rem;
+  }
+
+  .value-input,
+  .layer-inline-number-field > input {
+    font-size: 0.82rem;
   }
 }

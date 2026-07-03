@@ -4,14 +4,34 @@ import { drawEffectLayer } from "effects";
 import { isEffectLayer } from "layers";
 
 function drawEmptyState(ctx, width, height, getText) {
+  const viewportWidth = window.visualViewport?.width ?? window.innerWidth ?? width;
+  const isCompactViewport = viewportWidth <= 375;
+  const titleText = getText("previewEmptyTitle");
+  const secondaryText = getText("previewEmptyText");
+  const canvasRect = typeof ctx.canvas.getBoundingClientRect === "function"
+    ? ctx.canvas.getBoundingClientRect()
+    : { width, height };
+  const cssWidth = canvasRect.width || width;
+  const pixelScale = width / cssWidth;
+  const titleFontSize = isCompactViewport ? Math.round(14 * pixelScale) : 24;
+  const secondaryFontSize = isCompactViewport ? Math.round(12 * pixelScale) : 16;
+  const titleY = secondaryText ? height / 2 - 6 : height / 2;
+
   ctx.save();
   ctx.fillStyle = "rgba(24, 32, 47, 0.65)";
-  ctx.font = '600 24px "Segoe UI", sans-serif';
+  ctx.font = `600 ${titleFontSize}px "Segoe UI", sans-serif`;
   ctx.textAlign = "center";
-  ctx.fillText(getText("previewEmptyTitle"), width / 2, height / 2 - 6);
-  ctx.font = '400 16px "Segoe UI", sans-serif';
+  ctx.textBaseline = "middle";
+  ctx.fillText(titleText, width / 2, titleY);
+
+  if (!secondaryText) {
+    ctx.restore();
+    return;
+  }
+
+  ctx.font = `400 ${secondaryFontSize}px "Segoe UI", sans-serif`;
   ctx.fillStyle = "rgba(24, 32, 47, 0.48)";
-  ctx.fillText(getText("previewEmptyText"), width / 2, height / 2 + 24);
+  ctx.fillText(secondaryText, width / 2, height / 2 + 24);
   ctx.restore();
 }
 

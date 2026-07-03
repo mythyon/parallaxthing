@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Parallax Thing</title>
     <script>
-      const APP_VERSION = "20260702-73";
+      const APP_VERSION = "20260703-80";
       const head = document.head;
 
       const styleLink = document.createElement("link");
@@ -68,8 +68,10 @@
                   <button id="auto-depth-button" class="mini-button mini-button-accent" type="button">Auto speed</button>
                 </div>
               </div>
-              <div id="layer-list" class="layer-list empty">
-                <p id="layer-list-empty" class="empty-state">No layers yet.</p>
+              <div class="layer-list-shell">
+                <div id="layer-list" class="layer-list empty">
+                  <p id="layer-list-empty" class="empty-state">No layers yet.</p>
+                </div>
               </div>
               <button id="add-effect-button" class="mini-button mini-button-accent stack-add-effect-button" type="button">Add rays</button>
           </div>

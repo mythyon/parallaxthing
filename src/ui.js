@@ -213,6 +213,8 @@ function getViewportMeta(preset, quality = "1080p") {
 }
 
 export function createUI({ state, elements, callbacks, i18n }) {
+  const layerListShell = elements.layerList.parentElement;
+
   function captureLayerFocusState() {
     const activeElement = document.activeElement;
 
@@ -267,6 +269,39 @@ export function createUI({ state, elements, callbacks, i18n }) {
 
   function t(key, params) {
     return i18n.t(key, params);
+  }
+
+  function updateLayerListScrollIndicator() {
+    if (!layerListShell) {
+      return;
+    }
+
+    const shouldShowIndicator = state.layers.length > 5;
+    layerListShell.classList.toggle("is-scrollable", shouldShowIndicator);
+
+    if (!shouldShowIndicator) {
+      layerListShell.style.removeProperty("--layer-scroll-thumb-size");
+      layerListShell.style.removeProperty("--layer-scroll-thumb-offset");
+      return;
+    }
+
+    const clientHeight = elements.layerList.clientHeight;
+    const scrollHeight = elements.layerList.scrollHeight;
+    const trackHeight = Math.max(0, clientHeight - 8);
+
+    if (!clientHeight || scrollHeight <= clientHeight) {
+      layerListShell.style.setProperty("--layer-scroll-thumb-size", `${Math.max(28, trackHeight)}px`);
+      layerListShell.style.setProperty("--layer-scroll-thumb-offset", "0px");
+      return;
+    }
+
+    const thumbHeight = Math.max(28, Math.round((clientHeight / scrollHeight) * trackHeight));
+    const maxScrollTop = Math.max(1, scrollHeight - clientHeight);
+    const maxThumbOffset = Math.max(0, trackHeight - thumbHeight);
+    const thumbOffset = Math.round((elements.layerList.scrollTop / maxScrollTop) * maxThumbOffset);
+
+    layerListShell.style.setProperty("--layer-scroll-thumb-size", `${thumbHeight}px`);
+    layerListShell.style.setProperty("--layer-scroll-thumb-offset", `${thumbOffset}px`);
   }
 
   function renderStaticText() {
@@ -448,6 +483,7 @@ export function createUI({ state, elements, callbacks, i18n }) {
     renderMeta();
     renderPlayback();
     restoreLayerFocusState(focusState);
+    window.requestAnimationFrame(updateLayerListScrollIndicator);
   }
 
   elements.dropzone.addEventListener("click", () => elements.fileInput.click());
@@ -528,6 +564,8 @@ export function createUI({ state, elements, callbacks, i18n }) {
 
     callbacks.onLayerChange(field, event.target.value);
   });
+
+  elements.layerList.addEventListener("scroll", updateLayerListScrollIndicator, { passive: true });
 
   elements.playButton.addEventListener("click", () => callbacks.onPlay());
   elements.pauseButton.addEventListener("click", () => callbacks.onPause());
