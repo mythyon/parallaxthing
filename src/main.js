@@ -46,6 +46,18 @@ const LAYER_LIMITS = {
   rayBlur: { min: 0, max: 100 },
   rotationOffset: { min: -180, max: 180 },
   rotationSpeed: { min: 0, max: 200 },
+  sunLensFlareIntensity: { min: 0, max: 100 },
+  sunLensFlareCount: { min: 3, max: 10 },
+  sunLensFlareSize: { min: 50, max: 180 },
+  sunLensFlareBlur: { min: 0, max: 100 },
+  sunLensFlareAxisLength: { min: 40, max: 180 },
+  flareRingCount: { min: 4, max: 16 },
+  flareAngleOffset: { min: -180, max: 180 },
+  flareAxisLength: { min: 40, max: 220 },
+  flareRingScale: { min: 50, max: 220 },
+  flareEndpointSpeed: { min: 0, max: 200 },
+  flareBlur: { min: 0, max: 100 },
+  flareStreakIntensity: { min: 0, max: 200 },
   offset: { min: -2000, max: 2000 },
 };
 const CAMERA_LIMITS = {
@@ -154,6 +166,8 @@ const elements = {
   stackTitle: document.querySelector("#stack-title"),
   autoDepthButton: document.querySelector("#auto-depth-button"),
   addEffectButton: document.querySelector("#add-effect-button"),
+  addDustButton: document.querySelector("#add-dust-button"),
+  addCameraFlareButton: document.querySelector("#add-camera-flare-button"),
   layerList: document.querySelector("#layer-list"),
   previewTitle: document.querySelector("#preview-title"),
   previewPanel: document.querySelector(".preview-panel"),
@@ -610,6 +624,19 @@ function handleLayerChange(field, rawValue) {
     patch = {
       sunGlowEnabled: Boolean(rawValue),
     };
+  } else if (field === "sunLensFlareEnabled" && isEffectLayer(selectedLayer)) {
+    patch = {
+      sunLensFlareEnabled: Boolean(rawValue),
+    };
+  } else if (field === "sunLensFlarePreset" && isEffectLayer(selectedLayer)) {
+    patch = {
+      sunLensFlarePreset: rawValue === "cool" ? "cool" : "warm",
+    };
+  } else if (field in LAYER_LIMITS && field.startsWith("sunLensFlare") && isEffectLayer(selectedLayer)) {
+    const limits = LAYER_LIMITS[field];
+    patch = {
+      [field]: clampNumber(rawValue, limits.min, limits.max, selectedLayer[field] ?? limits.min),
+    };
   } else if (field === "raySpeed" && isEffectLayer(selectedLayer)) {
     patch = {
       raySpeed: clampNumber(rawValue, LAYER_LIMITS.raySpeed.min, LAYER_LIMITS.raySpeed.max, selectedLayer.raySpeed),
@@ -638,6 +665,38 @@ function handleLayerChange(field, rawValue) {
     patch = {
       rotationSpeed: clampNumber(rawValue, LAYER_LIMITS.rotationSpeed.min, LAYER_LIMITS.rotationSpeed.max, selectedLayer.rotationSpeed),
     };
+  } else if (field === "flareColorPreset" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareColorPreset: rawValue === "cool" ? "cool" : "warm",
+    };
+  } else if (field === "flareRingCount" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareRingCount: clampNumber(rawValue, LAYER_LIMITS.flareRingCount.min, LAYER_LIMITS.flareRingCount.max, selectedLayer.flareRingCount),
+    };
+  } else if (field === "flareAngleOffset" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareAngleOffset: clampNumber(rawValue, LAYER_LIMITS.flareAngleOffset.min, LAYER_LIMITS.flareAngleOffset.max, selectedLayer.flareAngleOffset),
+    };
+  } else if (field === "flareAxisLength" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareAxisLength: clampNumber(rawValue, LAYER_LIMITS.flareAxisLength.min, LAYER_LIMITS.flareAxisLength.max, selectedLayer.flareAxisLength),
+    };
+  } else if (field === "flareRingScale" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareRingScale: clampNumber(rawValue, LAYER_LIMITS.flareRingScale.min, LAYER_LIMITS.flareRingScale.max, selectedLayer.flareRingScale),
+    };
+  } else if (field === "flareEndpointSpeed" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareEndpointSpeed: clampNumber(rawValue, LAYER_LIMITS.flareEndpointSpeed.min, LAYER_LIMITS.flareEndpointSpeed.max, selectedLayer.flareEndpointSpeed),
+    };
+  } else if (field === "flareBlur" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareBlur: clampNumber(rawValue, LAYER_LIMITS.flareBlur.min, LAYER_LIMITS.flareBlur.max, selectedLayer.flareBlur),
+    };
+  } else if (field === "flareStreakIntensity" && isEffectLayer(selectedLayer)) {
+    patch = {
+      flareStreakIntensity: clampNumber(rawValue, LAYER_LIMITS.flareStreakIntensity.min, LAYER_LIMITS.flareStreakIntensity.max, selectedLayer.flareStreakIntensity),
+    };
   } else if (field === "offsetX") {
     patch = {
       offsetX: clampNumber(rawValue, LAYER_LIMITS.offset.min, LAYER_LIMITS.offset.max, selectedLayer.offsetX),
@@ -654,15 +713,15 @@ function handleLayerChange(field, rawValue) {
   renderAll();
 }
 
-function handleEffectOptionsToggle(layerId, isOpen) {
+function handleEffectOptionsToggle(layerId, isOpen, optionsField = "effectOptionsOpen") {
   const layer = state.layers.find((item) => item.id === layerId);
 
-  if (!isEffectLayer(layer)) {
+  if (!isEffectLayer(layer) || !["effectOptionsOpen", "sunLensFlareOptionsOpen"].includes(optionsField)) {
     return;
   }
 
   state.layers = updateLayer(state.layers, layerId, {
-    effectOptionsOpen: Boolean(isOpen),
+    [optionsField]: Boolean(isOpen),
   });
   renderAll();
 }
@@ -754,16 +813,27 @@ function handleAutoDepth() {
   renderAll();
 }
 
-function handleAddEffect() {
+function handleAddEffect(effectKind = "sun-flare") {
   if (state.export.isRendering || state.layers.length === 0) {
     return;
   }
 
-  const effectLayer = createEffectLayer();
+  if (state.layers.length >= MAX_LAYERS) {
+    setStatus(createStatusEntry("statusLimitReached", { count: MAX_LAYERS }), "error");
+    renderAll();
+    return;
+  }
+
+  const effectLayer = createEffectLayer(effectKind);
   state.layers = [effectLayer, ...state.layers];
   state.selectedLayerId = effectLayer.id;
   state.playback.isPlaying = false;
-  setStatus(createStatusEntry("statusEffectAdded"), "success");
+  const statusKey = effectKind === "gold-dust"
+    ? "statusDustAdded"
+    : effectKind === "camera-flare"
+      ? "statusCameraFlareAdded"
+      : "statusEffectAdded";
+  setStatus(createStatusEntry(statusKey), "success");
   renderAll();
 
   ensureEffectEngine().then(() => {
@@ -839,8 +909,10 @@ function handleCanvasPointerDown(event) {
     return;
   }
 
-  state.drag.scaleX = elements.canvas.width / rect.width;
-  state.drag.scaleY = elements.canvas.height / rect.height;
+  const viewportPreset = VIEWPORT_PRESETS[state.preview.viewportPreset] ?? VIEWPORT_PRESETS.landscape;
+  const referenceSize = viewportPreset.exportSizes["1080p"];
+  state.drag.scaleX = referenceSize.width / rect.width;
+  state.drag.scaleY = referenceSize.height / rect.height;
   elements.canvas.setPointerCapture?.(event.pointerId);
 
   if (event.pointerType === "touch") {

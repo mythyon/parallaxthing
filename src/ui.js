@@ -10,6 +10,8 @@ function getIconMarkup(name) {
     down: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M10 6h4v4h4l-6 8-6-8h4z"/></svg>',
     remove: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M9 3h6l1 2h4v2H4V5h4zm1 6h2v8h-2zm4 0h2v8h-2zM7 9h2v8H7z"/></svg>',
     flare: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="m12 2 1.6 5.2L19 9l-5.4 1.8L12 16l-1.6-5.2L5 9l5.4-1.8zM18.5 14l.8 2.6 2.7.9-2.7.9-.8 2.6-.8-2.6-2.7-.9 2.7-.9zM5.5 13l.8 2.4 2.5.8-2.5.8-.8 2.4-.8-2.4-2.5-.8 2.5-.8z"/></svg>',
+    dust: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="9" r="2.1" fill="currentColor"/><circle cx="13.5" cy="6.5" r="1.5" fill="currentColor"/><circle cx="16.5" cy="12.5" r="2.5" fill="currentColor"/><circle cx="10.5" cy="15.5" r="1.8" fill="currentColor"/><circle cx="18.5" cy="7.5" r="1.1" fill="currentColor"/><circle cx="6.5" cy="16.5" r="1.2" fill="currentColor"/></svg>',
+    lens: '<svg class="button-icon" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="6.2" fill="none" stroke="currentColor" stroke-width="1.8"/><circle cx="12" cy="12" r="3.2" fill="none" stroke="currentColor" stroke-width="1.6"/><circle cx="18.2" cy="8.1" r="1.3" fill="currentColor"/><circle cx="6.4" cy="16.8" r="1" fill="currentColor"/></svg>',
     "viewport-landscape": '<svg class="button-icon viewport-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="6" width="18" height="12" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     "viewport-portrait": '<svg class="button-icon viewport-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="7" y="3" width="10" height="18" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
     "viewport-square": '<svg class="button-icon viewport-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="5" width="14" height="14" rx="2" ry="2" fill="none" stroke="currentColor" stroke-width="2"/></svg>',
@@ -28,9 +30,20 @@ function getLayerScaleConfig(layer) {
 
 function getLayerThumbMarkup(layer, t) {
   if (layer.type === "effect") {
+    const effectIcon = layer.effectKind === "gold-dust"
+      ? "dust"
+      : layer.effectKind === "camera-flare"
+        ? "lens"
+        : "flare";
+    const effectLabel = layer.effectKind === "gold-dust"
+      ? t("effectGoldDust")
+      : layer.effectKind === "camera-flare"
+        ? t("effectCameraFlare")
+        : t("effectSunFlare");
+
     return `
-      <div class="layer-thumb layer-thumb-effect" aria-label="${t("effectSunFlare")}">
-        ${getIconMarkup("flare")}
+      <div class="layer-thumb layer-thumb-effect" aria-label="${effectLabel}">
+        ${getIconMarkup(effectIcon)}
       </div>
     `;
   }
@@ -40,6 +53,14 @@ function getLayerThumbMarkup(layer, t) {
 
 function getLayerTitle(layer, t) {
   if (layer.type === "effect") {
+    if (layer.effectKind === "gold-dust") {
+      return t("effectGoldDust");
+    }
+
+    if (layer.effectKind === "camera-flare") {
+      return t("effectCameraFlare");
+    }
+
     return t("effectSunFlare");
   }
 
@@ -48,6 +69,14 @@ function getLayerTitle(layer, t) {
 
 function getLayerDetails(layer, t) {
   if (layer.type === "effect") {
+    if (layer.effectKind === "gold-dust") {
+      return t("effectDustDetails", { depth: layer.depth, opacity: layer.opacity });
+    }
+
+    if (layer.effectKind === "camera-flare") {
+      return t("effectCameraFlareDetails", { depth: layer.depth, opacity: layer.opacity });
+    }
+
     return t("effectDetails", { depth: layer.depth, opacity: layer.opacity });
   }
 
@@ -61,7 +90,10 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
   const offsetXId = `layer-offset-x-${layer.id}`;
   const offsetYId = `layer-offset-y-${layer.id}`;
   const scaleConfig = getLayerScaleConfig(layer);
-  const effectAdvancedMarkup = layer.type === "effect" ? `
+  const mobileEffectValueLock = window.matchMedia("(max-width: 720px)").matches
+    ? ' readonly aria-readonly="true" tabindex="-1"'
+    : "";
+  const effectAdvancedMarkup = layer.type === "effect" && layer.effectKind === "sun-flare" ? `
       <details class="layer-effect-disclosure" data-effect-details="${layer.id}" ${layer.effectOptionsOpen ? "open" : ""}>
         <summary class="layer-effect-summary" data-effect-summary="${layer.id}">
           <span>${t("effectAdvancedTitle")}</span>
@@ -72,6 +104,68 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
             <input type="checkbox" data-layer-field="sunGlowEnabled" ${layer.sunGlowEnabled ? "checked" : ""}>
             <span>${t("effectSunGlowLabel")}</span>
           </label>
+
+          <label class="check-field field-wide">
+            <input type="checkbox" data-layer-field="sunLensFlareEnabled" ${layer.sunLensFlareEnabled ? "checked" : ""}>
+            <span>${t("effectSunLensFlareLabel")}</span>
+          </label>
+
+          <details class="layer-effect-disclosure camera-flare-options" ${layer.sunLensFlareOptionsOpen ? "open" : ""}>
+            <summary class="layer-effect-summary" data-effect-summary="${layer.id}" data-effect-options-field="sunLensFlareOptionsOpen">
+              <span>${t("effectSunLensFlareSettingsTitle")}</span>
+            </summary>
+
+            <div class="layer-effect-content">
+              <label class="field field-wide">
+                <span>${t("effectCameraFlarePresetLabel")}</span>
+                <select data-layer-field="sunLensFlarePreset">
+                  <option value="warm" ${layer.sunLensFlarePreset !== "cool" ? "selected" : ""}>${t("effectCameraFlarePresetWarm")}</option>
+                  <option value="cool" ${layer.sunLensFlarePreset === "cool" ? "selected" : ""}>${t("effectCameraFlarePresetCool")}</option>
+                </select>
+              </label>
+
+              <label class="field field-wide layer-inline-range-field">
+                <span>${t("effectSunLensFlareIntensityLabel")}</span>
+                <div class="range-row">
+                  <input type="range" min="0" max="100" step="1" value="${layer.sunLensFlareIntensity ?? 55}" data-layer-field="sunLensFlareIntensity">
+                  <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.sunLensFlareIntensity ?? 55}" data-layer-field="sunLensFlareIntensity"${mobileEffectValueLock}>
+                </div>
+              </label>
+
+              <label class="field field-wide layer-inline-range-field">
+                <span>${t("effectCameraFlareRingCountLabel")}</span>
+                <div class="range-row">
+                  <input type="range" min="3" max="10" step="1" value="${layer.sunLensFlareCount ?? 5}" data-layer-field="sunLensFlareCount">
+                  <input class="value-pill value-input" type="number" min="3" max="10" step="1" value="${layer.sunLensFlareCount ?? 5}" data-layer-field="sunLensFlareCount"${mobileEffectValueLock}>
+                </div>
+              </label>
+
+              <label class="field field-wide layer-inline-range-field">
+                <span>${t("effectCameraFlareRingScaleLabel")}</span>
+                <div class="range-row">
+                  <input type="range" min="50" max="180" step="1" value="${layer.sunLensFlareSize ?? 100}" data-layer-field="sunLensFlareSize">
+                  <input class="value-pill value-input" type="number" min="50" max="180" step="1" value="${layer.sunLensFlareSize ?? 100}" data-layer-field="sunLensFlareSize"${mobileEffectValueLock}>
+                </div>
+              </label>
+
+              <label class="field field-wide layer-inline-range-field">
+                <span>${t("effectCameraFlareBlurLabel")}</span>
+                <div class="range-row">
+                  <input type="range" min="0" max="100" step="1" value="${layer.sunLensFlareBlur ?? 10}" data-layer-field="sunLensFlareBlur">
+                  <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.sunLensFlareBlur ?? 10}" data-layer-field="sunLensFlareBlur"${mobileEffectValueLock}>
+                </div>
+              </label>
+
+              <label class="field field-wide layer-inline-range-field">
+                <span>${t("effectSunLensFlarePathLengthLabel")}</span>
+                <div class="range-row">
+                  <input type="range" min="40" max="180" step="1" value="${layer.sunLensFlareAxisLength ?? 100}" data-layer-field="sunLensFlareAxisLength">
+                  <input class="value-pill value-input" type="number" min="40" max="180" step="1" value="${layer.sunLensFlareAxisLength ?? 100}" data-layer-field="sunLensFlareAxisLength"${mobileEffectValueLock}>
+                </div>
+              </label>
+
+            </div>
+          </details>
 
           <label class="field field-wide layer-inline-range-field">
             <span>${t("effectOpacityLabel")}</span>
@@ -134,6 +228,86 @@ function createLayerCardMarkup(layer, index, total, t, isSelected) {
             <div class="range-row">
               <input type="range" min="0" max="200" step="1" value="${layer.rotationSpeed}" data-layer-field="rotationSpeed">
               <input class="value-pill value-input" type="number" min="0" max="200" step="1" value="${layer.rotationSpeed}" data-layer-field="rotationSpeed">
+            </div>
+          </label>
+        </div>
+      </details>
+  ` : layer.type === "effect" && layer.effectKind === "camera-flare" ? `
+      <details class="layer-effect-disclosure camera-flare-options" data-effect-details="${layer.id}" ${layer.effectOptionsOpen ? "open" : ""}>
+        <summary class="layer-effect-summary" data-effect-summary="${layer.id}">
+          <span>${t("effectCameraFlareTitle")}</span>
+        </summary>
+
+        <div class="layer-effect-content">
+          <label class="field field-wide">
+            <span>${t("effectCameraFlarePresetLabel")}</span>
+            <select data-layer-field="flareColorPreset">
+              <option value="warm" ${layer.flareColorPreset !== "cool" ? "selected" : ""}>${t("effectCameraFlarePresetWarm")}</option>
+              <option value="cool" ${layer.flareColorPreset === "cool" ? "selected" : ""}>${t("effectCameraFlarePresetCool")}</option>
+            </select>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectOpacityLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="0" max="100" step="1" value="${layer.opacity}" data-layer-field="opacity">
+              <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.opacity}" data-layer-field="opacity"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareRingCountLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="4" max="16" step="1" value="${layer.flareRingCount}" data-layer-field="flareRingCount">
+              <input class="value-pill value-input" type="number" min="4" max="16" step="1" value="${layer.flareRingCount}" data-layer-field="flareRingCount"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareAngleLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="-180" max="180" step="1" value="${layer.flareAngleOffset}" data-layer-field="flareAngleOffset">
+              <input class="value-pill value-input" type="number" min="-180" max="180" step="1" value="${layer.flareAngleOffset}" data-layer-field="flareAngleOffset"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareAxisLengthLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="40" max="220" step="1" value="${layer.flareAxisLength}" data-layer-field="flareAxisLength">
+              <input class="value-pill value-input" type="number" min="40" max="220" step="1" value="${layer.flareAxisLength}" data-layer-field="flareAxisLength"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareRingScaleLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="50" max="220" step="1" value="${layer.flareRingScale}" data-layer-field="flareRingScale">
+              <input class="value-pill value-input" type="number" min="50" max="220" step="1" value="${layer.flareRingScale}" data-layer-field="flareRingScale"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareEndpointSpeedLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="0" max="200" step="1" value="${layer.flareEndpointSpeed}" data-layer-field="flareEndpointSpeed">
+              <input class="value-pill value-input" type="number" min="0" max="200" step="1" value="${layer.flareEndpointSpeed}" data-layer-field="flareEndpointSpeed"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareBlurLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="0" max="100" step="1" value="${layer.flareBlur}" data-layer-field="flareBlur">
+              <input class="value-pill value-input" type="number" min="0" max="100" step="1" value="${layer.flareBlur}" data-layer-field="flareBlur"${mobileEffectValueLock}>
+            </div>
+          </label>
+
+          <label class="field field-wide layer-inline-range-field">
+            <span>${t("effectCameraFlareStreakLabel")}</span>
+            <div class="range-row">
+              <input type="range" min="0" max="200" step="1" value="${layer.flareStreakIntensity}" data-layer-field="flareStreakIntensity">
+              <input class="value-pill value-input" type="number" min="0" max="200" step="1" value="${layer.flareStreakIntensity}" data-layer-field="flareStreakIntensity"${mobileEffectValueLock}>
             </div>
           </label>
         </div>
@@ -325,6 +499,8 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.stackTitle.textContent = t("stackTitle");
     elements.autoDepthButton.textContent = t("autoDepthButton");
     elements.addEffectButton.innerHTML = `${getIconMarkup("flare")}<span class="button-label">${t("addEffectButton")}</span>`;
+    elements.addDustButton.innerHTML = `${getIconMarkup("dust")}<span class="button-label">${t("addDustButton")}</span>`;
+    elements.addCameraFlareButton.innerHTML = `${getIconMarkup("lens")}<span class="button-label">${t("addCameraFlareButton")}</span>`;
     elements.previewTitle.textContent = t("previewTitle");
     elements.playButton.innerHTML = getIconMarkup("play");
     elements.pauseButton.innerHTML = getIconMarkup("pause");
@@ -453,6 +629,8 @@ export function createUI({ state, elements, callbacks, i18n }) {
     elements.exportSmoothInput.disabled = state.layers.length === 0 || state.export.isRendering;
     elements.autoDepthButton.disabled = state.layers.length === 0 || state.export.isRendering;
     elements.addEffectButton.disabled = state.layers.length === 0 || state.export.isRendering;
+    elements.addDustButton.disabled = state.layers.length === 0 || state.export.isRendering;
+    elements.addCameraFlareButton.disabled = state.layers.length === 0 || state.export.isRendering;
     elements.exportButton.disabled = state.layers.length === 0 || state.export.isRendering;
     elements.exportProgress.hidden = !state.export.isRendering;
     elements.exportProgressBar.value = progressPercent;
@@ -527,7 +705,11 @@ export function createUI({ state, elements, callbacks, i18n }) {
 
     if (summary) {
       event.preventDefault();
-      callbacks.onEffectOptionsToggle(summary.dataset.effectSummary, !summary.closest("details")?.open);
+      callbacks.onEffectOptionsToggle(
+        summary.dataset.effectSummary,
+        !summary.closest("details")?.open,
+        summary.dataset.effectOptionsField,
+      );
       return;
     }
 
@@ -588,7 +770,9 @@ export function createUI({ state, elements, callbacks, i18n }) {
   elements.langEnButton.addEventListener("click", () => callbacks.onLanguageChange("en"));
   elements.langRuButton.addEventListener("click", () => callbacks.onLanguageChange("ru"));
   elements.autoDepthButton.addEventListener("click", () => callbacks.onAutoDepth());
-  elements.addEffectButton.addEventListener("click", () => callbacks.onAddEffect());
+  elements.addEffectButton.addEventListener("click", () => callbacks.onAddEffect("sun-flare"));
+  elements.addDustButton.addEventListener("click", () => callbacks.onAddEffect("gold-dust"));
+  elements.addCameraFlareButton.addEventListener("click", () => callbacks.onAddEffect("camera-flare"));
   elements.viewportLandscapeButton.addEventListener("click", () => callbacks.onViewportPresetChange("landscape"));
   elements.viewportPortraitButton.addEventListener("click", () => callbacks.onViewportPresetChange("portrait"));
   elements.viewportSquareButton.addEventListener("click", () => callbacks.onViewportPresetChange("square"));

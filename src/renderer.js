@@ -3,6 +3,23 @@ import { getCameraFrame } from "camera";
 import { drawEffectLayer } from "effects";
 import { isEffectLayer } from "layers";
 
+const SCENE_REFERENCE_SIZES = {
+  landscape: { width: 1920, height: 1080 },
+  portrait: { width: 1080, height: 1920 },
+  square: { width: 1080, height: 1080 },
+};
+
+function getSceneMetrics(state, width, height) {
+  const reference = SCENE_REFERENCE_SIZES[state.preview.viewportPreset]
+    ?? SCENE_REFERENCE_SIZES.landscape;
+
+  return {
+    referenceWidth: reference.width,
+    referenceHeight: reference.height,
+    coordinateScale: Math.min(width / reference.width, height / reference.height),
+  };
+}
+
 function drawEmptyState(ctx, width, height, getText) {
   const viewportWidth = window.visualViewport?.width ?? window.innerWidth ?? width;
   const isCompactViewport = viewportWidth <= 375;
@@ -48,6 +65,7 @@ export function drawScene(context, {
   }
 
   const camera = getCameraFrame(state.camera, progress);
+  const { referenceWidth, referenceHeight, coordinateScale } = getSceneMetrics(state, width, height);
 
   context.save();
   context.clearRect(0, 0, width, height);
@@ -74,21 +92,22 @@ export function drawScene(context, {
         state,
         progress,
         camera,
+        coordinateScale,
       });
       continue;
     }
 
     const depthWeight = clamp(layer.depth / 100, 0, 2);
     const baseScale = state.preview.fitMode === "contain"
-      ? resolveContainScale(layer.width, layer.height, width, height)
+      ? resolveContainScale(layer.width, layer.height, referenceWidth, referenceHeight)
       : 1;
     const zoomStrength = 1 + ((camera.zoom - 1) * depthWeight);
-    const combinedScale = baseScale * (layer.scale / 100) * zoomStrength;
+    const combinedScale = baseScale * (layer.scale / 100) * zoomStrength * coordinateScale;
     const renderWidth = layer.width * combinedScale;
     const renderHeight = layer.height * combinedScale;
     const parallaxStrength = 0.1 + depthWeight * 1.2;
-    const offsetX = (layer.offsetX - camera.x * parallaxStrength) * camera.zoom;
-    const offsetY = (layer.offsetY - camera.y * parallaxStrength) * camera.zoom;
+    const offsetX = (layer.offsetX - camera.x * parallaxStrength) * camera.zoom * coordinateScale;
+    const offsetY = (layer.offsetY - camera.y * parallaxStrength) * camera.zoom * coordinateScale;
 
     const drawX = centerX - renderWidth / 2 + offsetX;
     const drawY = centerY - renderHeight / 2 + offsetY;

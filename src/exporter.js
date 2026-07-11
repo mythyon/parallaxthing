@@ -5,6 +5,8 @@ const BITRATE = 12_000_000;
 const RECORDER_WARMUP_MS = 120;
 const RECORDER_FLUSH_MS = 220;
 const SMOOTH_SAMPLE_COUNT = 4;
+const MAX_ENCODER_QUEUE_SIZE = 8;
+const ENCODER_YIELD_INTERVAL = 2;
 const TIME_CODE_SCALE_NS = 100_000;
 const TIME_CODE_SCALE_US = TIME_CODE_SCALE_NS / 1000;
 const MAX_CLUSTER_TIMECODE = 30_000;
@@ -71,6 +73,18 @@ function reportProgress(onProgress, update) {
     ...update,
     value: clampProgress(update?.value ?? 0),
   });
+}
+
+async function ensureEffectsReady(state) {
+  if (!hasEffectLayers(state.layers)) {
+    return;
+  }
+
+  const engine = await ensureEffectEngine();
+
+  if (!engine) {
+    throw new Error("effect_engine_unavailable");
+  }
 }
 
 function renderExportFrame(context, scratchContext, {
@@ -388,9 +402,7 @@ async function exportWithMediaRecorder(state, {
     throw new Error("export_unsupported");
   }
 
-  if (hasEffectLayers(state.layers)) {
-    await ensureEffectEngine();
-  }
+  await ensureEffectsReady(state);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -407,90 +419,111 @@ async function exportWithMediaRecorder(state, {
   scratchContext.imageSmoothingQuality = "high";
 
   const stream = canvas.captureStream(fps);
-  const mimeType = pickMediaRecorderMimeType();
-  const recorder = mimeType
-    ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: BITRATE })
-    : new MediaRecorder(stream, { videoBitsPerSecond: BITRATE });
-  const chunks = [];
+  let recorder = null;
 
-  const stopped = new Promise((resolve, reject) => {
-    recorder.ondataavailable = (event) => {
-      if (event.data?.size) {
-        chunks.push(event.data);
-      }
-    };
-    recorder.onerror = () => reject(recorder.error ?? new Error("export_failed"));
-    recorder.onstop = () => {
-      resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "video/webm" }));
-    };
-  });
-
-  renderExportFrame(context, scratchContext, {
-    width,
-    height,
-    state,
-    progress: 0,
-    frameDurationProgress: state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0,
-    smoothMotion,
-    t,
-  });
-
-  recorder.start();
-  reportProgress(onProgress, {
-    mode: "mediarecorder",
-    stage: "warmup",
-    value: 0,
-  });
-  await wait(RECORDER_WARMUP_MS);
-
-  const frameCount = Math.max(1, Math.ceil(state.camera.duration * fps));
-  const frameDelay = 1000 / fps;
-  const frameDurationProgress = state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0;
-
-  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    const progress = frameCount === 1 ? 1 : frameIndex / (frameCount - 1);
+  try {
+    const mimeType = pickMediaRecorderMimeType();
+    recorder = mimeType
+      ? new MediaRecorder(stream, { mimeType, videoBitsPerSecond: BITRATE })
+      : new MediaRecorder(stream, { videoBitsPerSecond: BITRATE });
+    const chunks = [];
+    let recorderError = null;
+    const stopped = new Promise((resolve, reject) => {
+      recorder.ondataavailable = (event) => {
+        if (event.data?.size) {
+          chunks.push(event.data);
+        }
+      };
+      recorder.onerror = (event) => {
+        recorderError = event.error ?? new Error("export_failed");
+        reject(recorderError);
+      };
+      recorder.onstop = () => {
+        resolve(new Blob(chunks, { type: recorder.mimeType || mimeType || "video/webm" }));
+      };
+    });
+    void stopped.catch(() => {});
 
     renderExportFrame(context, scratchContext, {
       width,
       height,
       state,
-      progress,
-      frameDurationProgress,
+      progress: 0,
+      frameDurationProgress: state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0,
       smoothMotion,
       t,
     });
 
+    recorder.start();
     reportProgress(onProgress, {
       mode: "mediarecorder",
-      stage: "render",
-      value: ((frameIndex + 1) / frameCount) * 0.9,
+      stage: "warmup",
+      value: 0,
     });
-    await wait(frameDelay);
+    await wait(RECORDER_WARMUP_MS);
+
+    const frameCount = Math.max(1, Math.ceil(state.camera.duration * fps));
+    const frameDelay = 1000 / fps;
+    const frameDurationProgress = state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0;
+
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const progress = frameCount === 1 ? 1 : frameIndex / (frameCount - 1);
+
+      renderExportFrame(context, scratchContext, {
+        width,
+        height,
+        state,
+        progress,
+        frameDurationProgress,
+        smoothMotion,
+        t,
+      });
+
+      reportProgress(onProgress, {
+        mode: "mediarecorder",
+        stage: "render",
+        value: ((frameIndex + 1) / frameCount) * 0.9,
+      });
+      await wait(frameDelay);
+
+      if (recorderError) {
+        throw recorderError;
+      }
+    }
+
+    reportProgress(onProgress, {
+      mode: "mediarecorder",
+      stage: "finalize",
+      value: 0.95,
+    });
+    await wait(Math.max(RECORDER_FLUSH_MS, frameDelay * 2));
+    if (recorder.state !== "inactive") {
+      recorder.stop();
+    }
+    const blob = await stopped;
+
+    if (blob.size === 0) {
+      throw new Error("export_failed");
+    }
+
+    reportProgress(onProgress, {
+      mode: "mediarecorder",
+      stage: "done",
+      value: 1,
+    });
+    return blob;
+  } finally {
+    if (recorder?.state && recorder.state !== "inactive") {
+      try {
+        recorder.stop();
+      } catch {
+      }
+    }
+
+    for (const track of stream.getTracks()) {
+      track.stop();
+    }
   }
-
-  reportProgress(onProgress, {
-    mode: "mediarecorder",
-    stage: "finalize",
-    value: 0.95,
-  });
-  await wait(Math.max(RECORDER_FLUSH_MS, frameDelay * 2));
-  recorder.stop();
-  const blob = await stopped;
-  reportProgress(onProgress, {
-    mode: "mediarecorder",
-    stage: "done",
-    value: 1,
-  });
-
-  for (const track of stream.getTracks()) {
-    track.stop();
-  }
-
-  if (blob.size === 0) {
-    throw new Error("export_failed");
-  }
-
-  return blob;
 }
 
 async function exportWithVideoEncoder(state, {
@@ -507,9 +540,7 @@ async function exportWithVideoEncoder(state, {
     throw new Error("webcodecs_unavailable");
   }
 
-  if (hasEffectLayers(state.layers)) {
-    await ensureEffectEngine();
-  }
+  await ensureEffectsReady(state);
 
   const canvas = document.createElement("canvas");
   canvas.width = width;
@@ -527,121 +558,144 @@ async function exportWithVideoEncoder(state, {
 
   const chunks = [];
   let encoderError = null;
-  const encoder = new VideoEncoder({
-    output(chunk) {
-      const data = new Uint8Array(chunk.byteLength);
-      chunk.copyTo(data);
-      chunks.push({
-        timestampUs: Number(chunk.timestamp),
-        keyFrame: chunk.type === "key",
-        data,
+  let encoder = null;
+
+  try {
+    encoder = new VideoEncoder({
+      output(chunk) {
+        const data = new Uint8Array(chunk.byteLength);
+        chunk.copyTo(data);
+        chunks.push({
+          timestampUs: Number(chunk.timestamp),
+          keyFrame: chunk.type === "key",
+          data,
+        });
+      },
+      error(error) {
+        encoderError = error;
+      },
+    });
+    encoder.configure(profile.config);
+
+    const frameCount = Math.max(1, Math.ceil(state.camera.duration * fps));
+    const frameDurationUs = Math.round(1_000_000 / fps);
+    const frameDurationProgress = state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0;
+    const durationUs = frameCount * frameDurationUs;
+    const keyFrameInterval = Math.max(1, Math.round(fps));
+
+    reportProgress(onProgress, {
+      mode: "webcodecs",
+      stage: "render",
+      value: 0,
+    });
+
+    for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
+      const progress = frameCount === 1 ? 1 : frameIndex / (frameCount - 1);
+
+      renderExportFrame(context, scratchContext, {
+        width,
+        height,
+        state,
+        progress,
+        frameDurationProgress,
+        smoothMotion,
+        t,
       });
-    },
-    error(error) {
-      encoderError = error;
-    },
-  });
 
-  encoder.configure(profile.config);
+      const timestampUs = frameIndex * frameDurationUs;
+      const frame = new VideoFrame(canvas, {
+        timestamp: timestampUs,
+        duration: frameDurationUs,
+      });
 
-  const frameCount = Math.max(1, Math.ceil(state.camera.duration * fps));
-  const frameDurationUs = Math.round(1_000_000 / fps);
-  const frameDurationProgress = state.camera.duration > 0 ? 1 / (state.camera.duration * fps) : 0;
-  const durationUs = frameCount * frameDurationUs;
-  const keyFrameInterval = Math.max(1, Math.round(fps));
+      try {
+        encoder.encode(frame, {
+          keyFrame: frameIndex === 0 || (frameIndex % keyFrameInterval) === 0,
+        });
+      } finally {
+        frame.close();
+      }
 
-  reportProgress(onProgress, {
-    mode: "webcodecs",
-    stage: "render",
-    value: 0,
-  });
+      if (encoderError) {
+        throw encoderError;
+      }
 
-  for (let frameIndex = 0; frameIndex < frameCount; frameIndex += 1) {
-    const progress = frameCount === 1 ? 1 : frameIndex / (frameCount - 1);
+      while (encoder.encodeQueueSize > MAX_ENCODER_QUEUE_SIZE) {
+        await wait(0);
 
-    renderExportFrame(context, scratchContext, {
-      width,
-      height,
-      state,
-      progress,
-      frameDurationProgress,
-      smoothMotion,
-      t,
+        if (encoderError) {
+          throw encoderError;
+        }
+
+        if (encoder.state !== "configured") {
+          throw new Error("export_failed");
+        }
+      }
+
+      reportProgress(onProgress, {
+        mode: "webcodecs",
+        stage: "render",
+        value: ((frameIndex + 1) / frameCount) * 0.82,
+      });
+
+      if ((frameIndex + 1) % ENCODER_YIELD_INTERVAL === 0) {
+        await wait(0);
+      }
+    }
+
+    reportProgress(onProgress, {
+      mode: "webcodecs",
+      stage: "flush",
+      value: 0.9,
     });
-
-    const timestampUs = frameIndex * frameDurationUs;
-    const frame = new VideoFrame(canvas, {
-      timestamp: timestampUs,
-      duration: frameDurationUs,
-    });
-
-    encoder.encode(frame, {
-      keyFrame: frameIndex === 0 || (frameIndex % keyFrameInterval) === 0,
-    });
-    frame.close();
+    await encoder.flush();
 
     if (encoderError) {
       throw encoderError;
     }
 
-    if (frameIndex % Math.max(1, Math.round(fps / 2)) === 0) {
-      await Promise.resolve();
+    if (chunks.length === 0) {
+      throw new Error("export_failed");
     }
+
+    chunks.sort((left, right) => left.timestampUs - right.timestampUs);
+    reportProgress(onProgress, {
+      mode: "webcodecs",
+      stage: "mux",
+      value: 0.92,
+    });
+
+    const blob = buildWebM({
+      width,
+      height,
+      fps,
+      durationUs,
+      codecId: profile.codecId,
+      codecName: profile.codecName,
+      chunks,
+      onMuxProgress(progress) {
+        reportProgress(onProgress, {
+          mode: "webcodecs",
+          stage: "mux",
+          value: 0.92 + (progress * 0.08),
+        });
+      },
+    });
 
     reportProgress(onProgress, {
       mode: "webcodecs",
-      stage: "render",
-      value: ((frameIndex + 1) / frameCount) * 0.82,
+      stage: "done",
+      value: 1,
     });
+    return blob;
+  } finally {
+    if (encoder && encoder.state !== "closed") {
+      try {
+        encoder.close();
+      } catch {
+      }
+    }
   }
-
-  reportProgress(onProgress, {
-    mode: "webcodecs",
-    stage: "flush",
-    value: 0.9,
-  });
-  await encoder.flush();
-  encoder.close();
-
-  if (encoderError) {
-    throw encoderError;
-  }
-
-  if (chunks.length === 0) {
-    throw new Error("export_failed");
-  }
-
-  chunks.sort((left, right) => left.timestampUs - right.timestampUs);
-  reportProgress(onProgress, {
-    mode: "webcodecs",
-    stage: "mux",
-    value: 0.92,
-  });
-
-  const blob = buildWebM({
-    width,
-    height,
-    fps,
-    durationUs,
-    codecId: profile.codecId,
-    codecName: profile.codecName,
-    chunks,
-    onMuxProgress(progress) {
-      reportProgress(onProgress, {
-        mode: "webcodecs",
-        stage: "mux",
-        value: 0.92 + (progress * 0.08),
-      });
-    },
-  });
-
-  reportProgress(onProgress, {
-    mode: "webcodecs",
-    stage: "done",
-    value: 1,
-  });
-
-  return blob;
 }
 
 export function createWebMExporter({ t }) {
@@ -663,10 +717,15 @@ export function createWebMExporter({ t }) {
           t,
         });
       } catch (error) {
-        if (error?.message !== "webcodecs_unavailable") {
+        if (error?.message === "effect_engine_unavailable") {
           throw error;
         }
 
+        reportProgress(onProgress, {
+          mode: "mediarecorder",
+          stage: "fallback",
+          value: 0,
+        });
         return exportWithMediaRecorder(state, {
           width,
           height,

@@ -38,19 +38,74 @@ export function createLayer(input) {
   return createImageLayer(input);
 }
 
-export function createEffectLayer() {
+export function createEffectLayer(effectKind = "sun-flare") {
+  if (effectKind === "camera-flare") {
+    return {
+      id: uid("effect"),
+      type: "effect",
+      effectKind,
+      name: "Camera flare",
+      fileName: "Camera flare",
+      width: 0,
+      height: 0,
+      depth: 52,
+      scale: 118,
+      opacity: 100,
+      flareColorPreset: "warm",
+      flareRingCount: 12,
+      flareAngleOffset: 45,
+      flareAxisLength: 145,
+      flareRingScale: 110,
+      flareEndpointSpeed: 100,
+      flareBlur: 10,
+      flareStreakIntensity: 18,
+      effectOptionsOpen: false,
+      offsetX: 0,
+      offsetY: 0,
+      tint: "#ffe6a8",
+    };
+  }
+
+  if (effectKind === "gold-dust") {
+    return {
+      id: uid("effect"),
+      type: "effect",
+      effectKind,
+      name: "Particles",
+      fileName: "Particles",
+      width: 0,
+      height: 0,
+      depth: 44,
+      scale: 112,
+      opacity: 82,
+      patternSeed: Math.random() * 1000000,
+      effectOptionsOpen: false,
+      offsetX: 0,
+      offsetY: 0,
+      tint: "#f3cf6a",
+    };
+  }
+
   return {
     id: uid("effect"),
     type: "effect",
     effectKind: "sun-flare",
-    name: "Rays",
-    fileName: "Rays",
+    name: "Sun",
+    fileName: "Sun",
     width: 0,
     height: 0,
     depth: 56,
     scale: 100,
     opacity: 72,
     sunGlowEnabled: false,
+    sunLensFlareEnabled: false,
+    sunLensFlarePreset: "warm",
+    sunLensFlareIntensity: 55,
+    sunLensFlareCount: 5,
+    sunLensFlareSize: 100,
+    sunLensFlareBlur: 10,
+    sunLensFlareAxisLength: 100,
+    sunLensFlareOptionsOpen: false,
     raySpeed: 100,
     rayLength: 100,
     rayCount: 8,

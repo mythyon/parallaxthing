@@ -109,3 +109,15 @@ export function getCameraFrame(camera, progress) {
 
   return getStandardCameraFrame(camera, progress);
 }
+
+export function getCameraMotionDelta(camera, progress, sampleOffset = 0.01) {
+  const safeOffset = clamp(sampleOffset, 0.001, 0.1);
+  const previousFrame = getCameraFrame(camera, clamp(progress - safeOffset, 0, 1));
+  const nextFrame = getCameraFrame(camera, clamp(progress + safeOffset, 0, 1));
+
+  return {
+    x: nextFrame.x - previousFrame.x,
+    y: nextFrame.y - previousFrame.y,
+    zoom: nextFrame.zoom - previousFrame.zoom,
+  };
+}

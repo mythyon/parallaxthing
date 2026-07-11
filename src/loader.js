@@ -28,43 +28,64 @@ async function decodeBitmap(file, objectUrl) {
   return loadImageElement(objectUrl);
 }
 
+function releaseLayer(layer) {
+  URL.revokeObjectURL(layer.objectUrl);
+
+  if ("close" in layer.bitmap && typeof layer.bitmap.close === "function") {
+    layer.bitmap.close();
+  }
+}
+
 export async function loadLayersFromFiles(files, { maxDimension = 4096 } = {}) {
   const acceptedFiles = Array.from(files).filter(isPngFile);
   const rejectedCount = files.length - acceptedFiles.length;
   const batchSize = acceptedFiles.length;
   const loaded = [];
 
-  for (const [index, file] of acceptedFiles.entries()) {
-    const objectUrl = URL.createObjectURL(file);
+  try {
+    for (const [index, file] of acceptedFiles.entries()) {
+      const objectUrl = URL.createObjectURL(file);
+      let bitmap = null;
 
-    try {
-      const bitmap = await decodeBitmap(file, objectUrl);
+      try {
+        bitmap = await decodeBitmap(file, objectUrl);
 
-      if (Math.max(bitmap.width, bitmap.height) > maxDimension) {
-        if ("close" in bitmap && typeof bitmap.close === "function") {
+        if (Math.max(bitmap.width, bitmap.height) > maxDimension) {
+          if ("close" in bitmap && typeof bitmap.close === "function") {
+            bitmap.close();
+          }
+          bitmap = null;
+
+          const error = new Error("file_too_large");
+          error.fileName = file.name;
+          error.maxDimension = maxDimension;
+          throw error;
+        }
+
+        loaded.push(
+          createLayer({
+            file,
+            bitmap,
+            objectUrl,
+            index,
+            batchSize,
+          }),
+        );
+        bitmap = null;
+      } catch (error) {
+        URL.revokeObjectURL(objectUrl);
+
+        if (bitmap && "close" in bitmap && typeof bitmap.close === "function") {
           bitmap.close();
         }
 
-        const error = new Error("file_too_large");
-        error.fileName = file.name;
-        error.maxDimension = maxDimension;
+        error.fileName ??= file.name;
         throw error;
       }
-
-      loaded.push(
-        createLayer({
-          file,
-          bitmap,
-          objectUrl,
-          index,
-          batchSize,
-        }),
-      );
-    } catch (error) {
-      URL.revokeObjectURL(objectUrl);
-      error.fileName ??= file.name;
-      throw error;
     }
+  } catch (error) {
+    loaded.forEach(releaseLayer);
+    throw error;
   }
 
   return {

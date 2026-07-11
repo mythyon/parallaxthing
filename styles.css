@@ -442,7 +442,7 @@ h3 {
   margin-top: -3px;
 }
 
-.layer-effect-disclosure[open] .layer-effect-summary::after {
+.layer-effect-disclosure[open] > .layer-effect-summary::after {
   transform: rotate(-135deg);
   margin-top: 3px;
 }
@@ -942,6 +942,12 @@ h3 {
 }
 
 @media (max-width: 720px) {
+  .camera-flare-options input[type="number"] {
+    pointer-events: none;
+    cursor: default;
+    opacity: 0.72;
+  }
+
   .app-shell {
     padding: 12px;
     gap: 14px;
